@@ -10,7 +10,7 @@ for (const path of ["index.html", "style.css", "trials.json", "app.js", "evidenc
 }
 const evidence = await readFile(new URL("dist/evidence.js", root), "utf8");
 const assistant = (await readFile(new URL("assistant.mjs", root), "utf8"))
-  .replace(/^import \{[^}]+\} from "\.\/dist\/evidence\.js";\n/m, "");
+  .replace(/^import \{[^}]+\} from "\.\/dist\/evidence\.js";\r?\n/m, "");
 const data = await readFile(new URL("dist/trials.json", root), "utf8");
 const optional = async (path) => {
   try { return await readFile(new URL(path, root), "utf8"); }

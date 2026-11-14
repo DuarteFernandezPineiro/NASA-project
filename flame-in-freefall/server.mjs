@@ -46,7 +46,7 @@ async function handle(req, res) {
     return;
   }
   const name = url.pathname === "/" ? "index.html" : url.pathname.slice(1);
-  if (!/^(?:index\.html|style\.css|app\.js|evidence\.js|trials\.json|media\/(?:b1|b3|f1|hero)\.(?:mp4|webp))$/.test(name)) {
+  if (!/^(?:index\.html|style\.css|app\.js|evidence\.js|trials\.json|media\/(?:[a-z]\d+[a-z]?(?:-second|-stills)?\.mp4|(?:[a-z]\d+[a-z]?|hero)\.webp))$/.test(name)) {
     res.writeHead(404).end("Recurso no encontrado");
     return;
   }
