@@ -6,6 +6,8 @@ const embeddingsEndpoint = "https://api.openai.com/v1/embeddings";
 // Sections that describe how the tests were set up rather than what was found.
 const methodTitle = /^(?:Experimental(?: Setup.*)?|Experiment Description|Experiment and Test Matrix|Test Matrix|Data Analysis|Introduction|Background|Information|Purpose of the Analysis)$/;
 
+const safetyQuestion = /segur|riesgo|peligr|inflamab|recomend|mejor|peor|safe|hazard|risk|danger|flammab|recommend|\bbest\b|\bworst\b/i;
+
 // Embed the question for semantic retrieval. Any failure falls back to keyword ranking.
 async function embedQuestion(question, env, request) {
   const config = embeddingConfig();
@@ -61,7 +63,11 @@ export async function answerQuestion(question, trials, env, request = fetch) {
     return fallback("Activa la IA generativa con OPENAI_API_KEY. Aquí tienes los pasajes relacionados del informe.");
   }
   const queryVector = await embedQuestion(question, env, request);
-  const sources = rankEvidence(question, trials, 9, queryVector);
+  // For safety or comparison questions, passages that only describe the test setup are left out:
+  // the model tends to turn a remark about a sample's convenience into a safety claim.
+  const sources = safetyQuestion.test(question)
+    ? rankEvidence(question, trials, 16, queryVector).filter((source) => source.setup || !methodTitle.test(source.title)).slice(0, 9)
+    : rankEvidence(question, trials, 9, queryVector);
   if (!sources.length) return fallback("La búsqueda no encontró evidencia vinculada para esta pregunta.");
   const sourceById = new Map(sources.map((source) => [source.id, source]));
   const claim = {
