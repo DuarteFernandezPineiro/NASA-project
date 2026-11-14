@@ -14,7 +14,11 @@ Abre [el panel local](http://127.0.0.1:4187). Para activar la IA, copia `.env.ex
 
 ## Consulta IA (RAG)
 
-La consulta recupera evidencia de dos fuentes: los pasajes del informe completo (`dist/chunks.json`, 238 fragmentos de las secciones 1 a 7 y los apéndices B a D, cada uno con su sección y página) y las observaciones de los 126 ensayos del apéndice A.
+La consulta recupera evidencia de tres fuentes, todas en `dist/chunks.json` o `dist/trials.json`:
+
+- **Informe BASS-II** (NASA/TM-20210011385): 238 pasajes de las secciones 1 a 7 y los apéndices B a D, cada uno con su sección y página.
+- **Guía de combustión en la ISS** ([NP-2015-10-034-JSC](https://www.nasa.gov/sites/default/files/atoms/files/np-2015-10-034-jsc_combustion_in_reduced_gravity-iss-mini-book-011116-508.pdf), 2015): 88 pasajes de contexto sobre otros experimentos (FLEX, SLICE, BRE…), principios de la combustión en microgravedad e instalaciones. Sus citas aparecen como `Guide·pN`. Ocupa como máximo cuatro de las nueve fuentes cuando el informe tiene candidatos, y no se usa en preguntas sobre un ensayo concreto.
+- **Observaciones de los 126 ensayos** del apéndice A.
 
 - **Búsqueda por palabras clave (BM25)**: funciona siempre, sin clave. Las preguntas en español se amplían con un glosario al vocabulario inglés del informe.
 - **Búsqueda semántica**: se activa si existe `dist/vectors.json`. La pregunta se convierte en un vector con `text-embedding-3-small` (256 dimensiones) y ambos rankings se combinan por fusión de rangos recíprocos.
