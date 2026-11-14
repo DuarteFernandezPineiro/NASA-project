@@ -12,7 +12,21 @@ node server.mjs
 
 Abre [el panel local](http://127.0.0.1:4187). Para activar la IA, copia `.env.example` a `.env`, introduce una `OPENAI_API_KEY` válida y reinicia el servidor. También se acepta la variable del entorno si el archivo local está vacío o ausente. `.env` está excluido del repositorio.
 
-La respuesta de IA se genera a partir de extractos recuperados del informe. Cada afirmación devuelve los identificadores de las fuentes utilizadas y el servidor los convierte en enlaces al PDF. Si el servicio de IA falta o falla, la interfaz indica que está mostrando resultados de búsqueda documental.
+## Consulta IA (RAG)
+
+La consulta recupera evidencia de dos fuentes: los pasajes del informe completo (`dist/chunks.json`, 238 fragmentos de las secciones 1 a 7 y los apéndices B a D, cada uno con su sección y página) y las observaciones de los 126 ensayos del apéndice A.
+
+- **Búsqueda por palabras clave (BM25)**: funciona siempre, sin clave. Las preguntas en español se amplían con un glosario al vocabulario inglés del informe.
+- **Búsqueda semántica**: se activa si existe `dist/vectors.json`. La pregunta se convierte en un vector con `text-embedding-3-small` (256 dimensiones) y ambos rankings se combinan por fusión de rangos recíprocos.
+
+Para regenerar el índice, con Python y `pdfplumber`:
+
+```powershell
+python scripts/build-index.py           # solo pasajes
+python scripts/build-index.py --embed   # pasajes y vectores (usa OPENAI_API_KEY del entorno o de .env)
+```
+
+La respuesta de IA se genera a partir de los pasajes recuperados e incluye una interpretación para seguridad contra incendios, marcada como tal y limitada al rango ensayado. Cada afirmación devuelve los identificadores de las fuentes utilizadas y el servidor los convierte en enlaces al PDF. Si el servicio de IA falta o falla, la interfaz indica que está mostrando resultados de búsqueda documental.
 
 ## Fuentes
 
