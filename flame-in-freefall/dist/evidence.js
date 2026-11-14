@@ -8,7 +8,7 @@ const featuredNotes = {
 };
 
 export const methods = [
-  { id: "methods", pdfPage: 13, page: 5, keywords: "radiómetro radiometro camara calibration calibracion sensor montaje ventilacion microgravedad", text: "The video overlay displayed the air velocity transducer reading in cm/s, fan voltage and radiometer signal. The fan voltage was calibrated against the airspeed transducer at the end of every operations day. The radiometer signal was not calibrated." },
+  { id: "methods", pdfPage: 13, page: 5, keywords: "radiómetro radiometro camara calibration calibracion sensor montaje ventilacion microgravedad", text: "The video overlay displayed the air velocity transducer reading in cm/s, fan voltage and radiometer signal. The fan voltage was calibrated against the airspeed transducer at the end of every operations day. The radiometer signal was uncalibrated and served to observe flame dynamics and steadiness." },
   { id: "gases", pdfPage: 14, page: 6, keywords: "gas gases oxigeno o2 co co2 nitrogeno ppm sensores medicion antes despues", text: "O2, CO2 and CO sensor readings were taken before and after each test. Nitrogen dilution was used to reach lower O2 levels in the working volume." },
   { id: "gravity", pdfPage: 48, page: 40, keywords: "gravedad tierra terrestres downward 1g normal propagacion mm/s pmma", text: "Section 2.3.7 compares a normal-gravity, downward PMMA spread experiment with the ISS microgravity sample. In this comparison for 100 µm PMMA the normal-gravity average was 2.0 mm/s. The highest measured microgravity spread value was about 2.2 mm/s under the tested conditions." },
 ];
@@ -31,12 +31,20 @@ function tokens(value) {
 
 export function rankEvidence(question, trials, limit = 9) {
   const words = tokens(question);
-  const exactIds = trials.filter((trial) => words.has(trial.id.toLowerCase()));
+  // The chemical symbol O₂ folds to the test ID O2 during normalization.
+  const explicitTrialO2 = /\b(?:ensayos?|tests?|trials?)\s+o2\b/i.test(question)
+    || /^\s*o2\s*[?.!]?\s*$/i.test(question);
+  const exactIds = trials.filter((trial) => words.has(trial.id.toLowerCase())
+    && (trial.id !== "O2" || explicitTrialO2));
   const items = trials.filter((trial) => trial.report?.observation).map((trial) => ({
     id: trial.id, pdfPage: trial.report.pdfPage, page: trial.report.page, table: trial.report.table,
     text: trial.report.observation,
-    setup: { sample: trial.sample, material: trial.family + " · " + trial.material, direction: trial.report.direction, initialO2: trial.initialO2, airDisplay: trial.air },
-    keywords: `${trial.id} ${trial.family} ${trial.material} ${trial.report.direction || ""}`,
+    setup: {
+      sample: trial.sample, material: trial.family + " · " + trial.material,
+      direction: trial.report.direction, initialO2CalibratedPercentByVolume: trial.initialO2,
+      airDisplay: trial.air, ...(trial.id === "B3" ? { initialO2UncalibratedPercentByVolume: 20.9 } : {}),
+    },
+    keywords: `${trial.id === "O2" ? "" : trial.id} ${trial.family} ${trial.material} ${trial.report.direction || ""}`,
   }));
   const ranked = [...items, ...methods].map((source) => {
     const referenceWords = tokens(`${source.keywords} ${source.text}`);
