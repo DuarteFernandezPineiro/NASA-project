@@ -92,6 +92,22 @@ function queryTerms(question) {
   return [...terms];
 }
 
+/* ---------- Scope of each part of the report ---------- */
+
+// Each investigator ran different samples; a passage only describes its own series.
+const scopes = {
+  2: { table: "A.1", label: "Bhattacharjee: thin PMMA films, opposed flow (tests B)" },
+  3: { table: "A.2", label: "Ferkul: Nomex fabric (tests F)" },
+  4: { table: "A.3", label: "Fernandez-Pello: PMMA rods, opposed spread (tests P)" },
+  5: { table: "A.4", label: "Miller and Wichman: PMMA slabs, narrow channel comparison (tests M)" },
+  6: { table: "A.5", label: "Olson: PMMA rods in axial flow (tests O)" },
+  7: { table: "A.6", label: "T'ien: SIBAL cotton-fiberglass fabric, concurrent flow (tests T)" },
+};
+const general = "All BASS-II: hardware, sensors, combustion products and overall conclusions";
+const majorOf = (section) => String(section ?? "").split(".")[0];
+const scopeOfSection = (section) => scopes[majorOf(section)]?.label || general;
+const majorOfTable = (table) => Object.keys(scopes).find((major) => scopes[major].table === table);
+
 /* ---------- Index ---------- */
 
 let reportChunks = [];
@@ -119,12 +135,12 @@ export const embeddingConfig = () => (vectorStore ? { model: vectorStore.model, 
 function buildCorpus(trials) {
   const passages = (reportChunks.length ? reportChunks : methods).map((chunk) => ({
     kind: "report", id: chunk.id, pdfPage: chunk.pdfPage, page: chunk.page,
-    section: chunk.section, title: chunk.title, text: chunk.text,
+    section: chunk.section, title: chunk.title, text: chunk.text, scope: scopeOfSection(chunk.section),
     searchable: `${chunk.title} ${chunk.title} ${chunk.text}`,
   }));
   const tests = trials.filter((trial) => trial.report?.observation).map((trial) => ({
     kind: "trial", id: trial.id, pdfPage: trial.report.pdfPage, page: trial.report.page, table: trial.report.table,
-    text: trial.report.observation,
+    text: trial.report.observation, scope: scopes[majorOfTable(trial.report.table)]?.label || general,
     setup: {
       sample: trial.sample, material: trial.family + " · " + trial.material,
       direction: trial.report.direction, initialO2CalibratedPercentByVolume: trial.initialO2,
@@ -187,9 +203,9 @@ function semanticScores(docs, queryVector) {
 const order = (scores) => scores.map((score, index) => ({ score, index }))
   .filter(({ score }) => score > 0).sort((a, b) => b.score - a.score);
 
-const publicSource = ({ kind, id, pdfPage, page, table, section, title, text, setup }) => (kind === "trial"
-  ? { id, pdfPage, page, table, text, setup }
-  : { id, pdfPage, page, section, title, text });
+const publicSource = ({ kind, id, pdfPage, page, table, section, title, text, setup, scope }) => (kind === "trial"
+  ? { id, pdfPage, page, table, text, setup, scope }
+  : { id, pdfPage, page, section, title, text, scope });
 
 /**
  * Rank report passages and test observations for a question.
@@ -217,15 +233,24 @@ export function rankEvidence(question, trials, limit = 9, queryVector = null) {
   const ranked = [...fused.entries()].sort((a, b) => b[1] - a[1]).map(([index]) => docs[index])
     .filter((doc) => semanticRaw || !best || lexicalRelevant(doc, lexical, docs, best));
 
+  // A question about named tests only takes passages from those tests' own series
+  // (plus the general sections), and fewer of them, so other experiments do not leak in.
+  const series = new Set(exact.map((doc) => majorOfTable(doc.table)));
+  const allowed = (doc) => !exact.length || !scopes[majorOf(doc.section)] || series.has(majorOf(doc.section));
+  const passageCap = exact.length ? 4 : limit;
   const picked = [...exact];
   const trialCap = exact.length ? exact.length : Math.ceil(limit / 2);
   let trialCount = exact.length;
+  let passageCount = 0;
   for (const doc of ranked) {
     if (picked.length >= limit) break;
     if (picked.includes(doc)) continue;
     if (doc.kind === "trial") {
       if (trialCount >= trialCap) continue;
       trialCount += 1;
+    } else {
+      if (passageCount >= passageCap || !allowed(doc)) continue;
+      passageCount += 1;
     }
     picked.push(doc);
   }
