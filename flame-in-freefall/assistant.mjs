@@ -3,6 +3,9 @@ import { embeddingConfig, findEvidence, rankEvidence } from "./dist/evidence.js"
 const endpoint = "https://api.openai.com/v1/responses";
 const embeddingsEndpoint = "https://api.openai.com/v1/embeddings";
 
+// Sections that describe how the tests were set up rather than what was found.
+const methodTitle = /^(?:Experimental(?: Setup.*)?|Experiment Description|Experiment and Test Matrix|Test Matrix|Data Analysis|Introduction|Background|Information|Purpose of the Analysis)$/;
+
 // Embed the question for semantic retrieval. Any failure falls back to keyword ranking.
 async function embedQuestion(question, env, request) {
   const config = embeddingConfig();
@@ -88,7 +91,10 @@ export async function answerQuestion(question, trials, env, request = fetch) {
       },
       observationNote: source.text,
     }
-    : { id: source.id, type: "report passage", series: source.scope, section: `${source.section} ${source.title}`, page: source.page, text: source.text }));
+    : {
+      id: source.id, type: "report passage", role: methodTitle.test(source.title) ? "method or context" : "results",
+      series: source.scope, section: `${source.section} ${source.title}`, page: source.page, text: source.text,
+    }));
   try {
     const response = await request(endpoint, {
       method: "POST",
@@ -106,6 +112,7 @@ export async function answerQuestion(question, trials, env, request = fetch) {
           "Cada fuente lleva un campo series que indica a qué investigador, material y ensayos se refiere. Un pasaje solo describe su propia serie: no lo uses para afirmar nada de un ensayo o material de otra serie, y si mezclas series dilo expresamente. Ignora las fuentes que no respondan a la pregunta aunque estén adjuntas; es preferible una respuesta corta.",
           "En las observationNote, los números tras 'fan pot' o 'fan setting' son ajustes del potenciómetro del ventilador, sin unidad: nunca los expreses en cm/s ni los trates como velocidades, tampoco en la interpretación. Solo son velocidades los valores con unidad cm/s o mm/s.",
           "Cuando des una lectura de oxígeno di si es calibrada, sin calibrar o una estimación anotada; no las combines en un rango. Traduce por completo al idioma de la respuesta (por ejemplo, 'sooty' es 'con hollín', referido a la llama) y no menciones nombres de campos de los datos.",
+          "Los pasajes llevan un campo role. Los de role 'method or context' describen cómo se montó el ensayo o por qué se eligió una muestra: úsalos solo para explicar el método, nunca como base de una afirmación o interpretación sobre cómo se comporta un material frente al fuego ni sobre su seguridad. Esas afirmaciones solo pueden apoyarse en pasajes de role 'results' o en observaciones de ensayo.",
           "No califiques un material de seguro, poco inflamable o preferible salvo que la evidencia diga que no prendió o que no propagó la llama; que un material se usara como muestra o combustible de ensayo significa que arde. Las ventajas que un pasaje atribuye a una muestra para hacer el experimento (por ejemplo, que conserve su estructura al quemarse) no son ventajas de seguridad. Si la pregunta pide comparar o clasificar materiales y la evidencia no los ensaya en las mismas condiciones, dilo en limitation.",
           "No extrapoles fuera de lo ensayado: BASS-II cubre aproximadamente 13,6-22,2 % de O2 inicial a presión de la ISS, flujos forzados de baja velocidad y muestras pequeñas. Si la pregunta sale de ese rango (por ejemplo, 30 % de O2 o gravedad parcial), dilo en limitation.",
           "En limitation indica qué falta o qué es incierto en la evidencia; cadena vacía si no aplica. Usa claims vacío si la evidencia no responde.",
