@@ -359,12 +359,28 @@ function duration(seconds) {
   return `${Math.floor(value / 60)}:${String(value % 60).padStart(2, "0")}`;
 }
 
+function recordingsFor(trial) {
+  return trial.recordings ?? [{
+    label: "Side view",
+    file: `${trial.id.toLowerCase()}.mp4`,
+    seconds: trial.video,
+    source: "https://psi.nasa.gov/physci/repo/data/investigations/PSI-25",
+  }];
+}
+
 function renderRecordings() {
-  byId("recording-grid").innerHTML = trials.filter((trial) => trial.video).map((trial) => `
+  const withVideo = trials.filter((trial) => trial.video);
+  const count = withVideo.reduce((total, trial) => total + recordingsFor(trial).length, 0);
+  byId("total-recordings").textContent = count;
+  byId("recordings-count").textContent = `${count} recordings · ${withVideo.length} trials`;
+  byId("recording-grid").innerHTML = withVideo.map((trial) => {
+    const views = recordingsFor(trial).length;
+    return `
     <button class="recording" type="button" data-video="${trial.id}" aria-label="Watch recording for trial ${trial.id}">
       <span class="recording-poster"><img src="media/${trial.id.toLowerCase()}.webp" loading="lazy" alt=""><b aria-hidden="true">▶</b></span>
-      <span class="recording-label"><strong>${trial.id} · ${escape(formatFamily(trial.family))}</strong><small>Sample ${escape(trial.sample)} · ${duration(trial.video)}</small></span>
-    </button>`).join("");
+      <span class="recording-label"><strong>${trial.id} · ${escape(formatFamily(trial.family))}</strong><small>Sample ${escape(trial.sample)} · ${views} ${views === 1 ? "video" : "videos"}</small></span>
+    </button>`;
+  }).join("");
 }
 
 function showModal(title, body, trigger) {
@@ -377,20 +393,59 @@ function showModal(title, body, trigger) {
 
 function showVideo(trial, trigger) {
   const name = trial.id.toLowerCase();
+  const recordings = recordingsFor(trial);
+  const [first] = recordings;
   showModal(`Recording ${trial.id} · ${formatFamily(trial.family)}`, `
-    <video controls playsinline preload="metadata" poster="media/${name}.webp" src="media/${name}.mp4" aria-label="Original NASA recording for trial ${trial.id}"></video>
-    <p class="modal-note">Sample ${escape(trial.sample)} · ${duration(trial.video)} runtime</p>
+    ${recordings.length > 1 ? `<label class="recording-picker">Recording
+      <select>${recordings.map((recording, index) => `<option value="${index}">${escape(recording.label)} · ${duration(recording.seconds)}</option>`).join("")}</select>
+    </label>` : ""}
+    <video controls playsinline preload="metadata" poster="media/${name}.webp" src="media/${escape(first.file)}" aria-label="${escape(first.label)} for trial ${trial.id}"></video>
+    <p class="modal-note">Sample ${escape(trial.sample)} · <span data-video-duration>${duration(first.seconds)}</span> runtime</p>
     <div class="detail-actions"><button class="primary" data-trial="${trial.id}" type="button">Trial datasheet</button>
+    <a class="citation" data-video-source href="${escape(first.source)}" target="_blank" rel="noreferrer">Source archive ↗</a>
     ${trial.report ? citation(trial.report) : ""}</div>`, trigger);
+  const picker = modalBody.querySelector(".recording-picker select");
+  picker?.addEventListener("change", () => {
+    const recording = recordings[Number(picker.value)];
+    const video = modalBody.querySelector("video");
+    video.src = `media/${recording.file}`;
+    video.setAttribute("aria-label", `${recording.label} for trial ${trial.id}`);
+    modalBody.querySelector("[data-video-duration]").textContent = duration(recording.seconds);
+    modalBody.querySelector("[data-video-source]").href = recording.source;
+  });
 }
 
 const observation = (trial) => trial.report?.observation || "No linked observation found in Appendix A.";
+const undocumented = "Unconfirmed";
+const yesNo = (value) => value === true ? "Yes" : value === false ? "No" : undocumented;
+const extinctionLabels = new Map(Object.entries({
+  flow_cutoff: "Airflow cut off",
+  flow_reduced: "Airflow reduced",
+  blowoff: "Blown out by airflow",
+  self_extinguished: "Self-extinguished",
+  fuel_consumed: "Fuel consumed",
+  igniter_removed: "Igniter removed",
+  igniter_still_on: "Extinguished with igniter still on",
+  transient_flame: "Brief flame",
+  method_unspecified: "Extinguished (method unspecified)",
+  not_extinguished: "Did not extinguish during trial",
+  not_applicable: "Not applicable (did not ignite)",
+}));
+const outcomeFields = [
+  ["Ignited", (trial) => yesNo(trial.ignited)],
+  ["Spread", (trial) => yesNo(trial.spread)],
+  ["Extinction", (trial) => extinctionLabels.get(trial.extinction) ?? undocumented],
+];
 const gasNames = ["Initial calibrated O₂ (%)", "Final calibrated O₂ (%)", "Initial CO₂ (%)", "Final CO₂ (%)", "Initial CO (ppm)", "Final CO (ppm)"];
 const gasValue = (trial, index) => /^(?:none|n\/?a|-*)$/i.test(trial.gasReadings[index]) ? "No data" : trial.gasReadings[index];
 
 function showTrial(trial, trigger) {
   showModal(`Trial ${trial.id} · Sample ${trial.sample}`, `
     <p><strong>${escape(trial.material)}</strong> · ${escape(trial.pi)}</p>
+    <section class="outcome-summary" aria-labelledby="outcome-heading">
+      <h3 id="outcome-heading">Trial outcome</h3>
+      <dl class="facts">${outcomeFields.map(([label, value]) => formatField(label, value(trial))).join("")}</dl>
+    </section>
     <dl class="facts">
       ${formatField("Material family", formatFamily(trial.family))}
       ${formatField("Flow direction", formatDirection(trial.report?.direction))}
@@ -411,6 +466,7 @@ function compare(trigger) {
     ["Material", (trial) => trial.material],
     ["Family", (trial) => formatFamily(trial.family)],
     ["Sample", (trial) => trial.sample],
+    ...outcomeFields,
     ["Flow direction", (trial) => formatDirection(trial.report?.direction)],
     ["Air display · original", (trial) => trial.air || "No data"],
     ...gasNames.map((name, index) => [name, (trial) => gasValue(trial, index)]),
