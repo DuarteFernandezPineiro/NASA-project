@@ -4,9 +4,16 @@ import { createServer } from "node:http";
 import { Readable } from "node:stream";
 import { parseEnv } from "node:util";
 import { handleAsk } from "./assistant.mjs";
+import { loadIndex } from "./dist/evidence.js";
 
 const root = new URL("./dist/", import.meta.url);
 const trials = JSON.parse(await readFile(new URL("trials.json", root), "utf8"));
+const optionalJson = async (name) => {
+  try { return JSON.parse(await readFile(new URL(name, root), "utf8")); }
+  catch (error) { if (error.code !== "ENOENT") throw error; return undefined; }
+};
+// Report passages (scripts/build-index.py) and, when generated, their embedding vectors.
+loadIndex({ chunks: await optionalJson("chunks.json"), vectors: await optionalJson("vectors.json") });
 let localConfig = {};
 try { localConfig = parseEnv(await readFile(new URL("./.env", import.meta.url), "utf8")); }
 catch (error) { if (error.code !== "ENOENT") throw error; }
