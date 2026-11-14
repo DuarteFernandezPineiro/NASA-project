@@ -2,13 +2,16 @@
 import csv
 import json
 import re
+from importlib import import_module
 from pathlib import Path
 
 import pdfplumber
 
+# The extractor is also runnable as scripts/extract-outcomes.py.
+extract_outcomes = import_module("extract-outcomes").extract_outcomes
+
 PROJECT = Path(__file__).resolve().parents[1]
 INPUT = PROJECT.parent
-VIDEOS = {"B1": 44.81, "B3": 58.32, "F1": 78.24}
 TABLES = ["A.1", "A.1", "A.2", "A.3", "A.3", "A.4", "A.4", "A.5", "A.5", "A.6", "A.6"]
 
 
@@ -68,6 +71,7 @@ def material_family(label, report_material):
 
 def main():
     report = read_report()
+    videos = json.loads((PROJECT / "dist" / "media" / "catalog.json").read_text(encoding="utf-8"))
     records = []
     with (INPUT / "PSI-25_Experimental table_BASS-II.csv").open(encoding="utf-8-sig", newline="") as file:
         for index, row in enumerate(csv.reader(file)):
@@ -77,13 +81,16 @@ def main():
                 re.sub(r"\s+", " ", value).strip() for value in row
             )
             source = report.get((test_id, sample.lower()))
+            recordings = videos.get(test_id, [])
             records.append({
                 "id": test_id, "sample": sample, "date": date, "gmt": gmt, "pi": pi,
                 "material": material,
                 "family": material_family(material, (source or {}).get("material", "") + (" PMMA" if test_id == "B3" else "")),
                 "restrictor": restrictor, "fan": fan, "air": air, "gain": gain, "frames": frames,
                 "initialO2": number(gases[0]), "gasReadings": gases,
-                "video": VIDEOS.get(test_id), "report": source, "csvLine": index + 1,
+                "video": recordings[0]["seconds"] if recordings else None,
+                "recordings": recordings, "report": source, "csvLine": index + 1,
+                **extract_outcomes(test_id, source),
             })
     (PROJECT / "dist" / "trials.json").write_text(
         json.dumps(records, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
