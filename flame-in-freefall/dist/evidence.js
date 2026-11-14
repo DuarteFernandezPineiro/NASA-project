@@ -1,5 +1,10 @@
 const REPORT = "https://ntrs.nasa.gov/api/citations/20210011385/downloads/TM-20210011385.pdf";
-export const reportLink = (source) => `${REPORT}#page=${source.pdfPage}`;
+const GUIDE = "https://www.nasa.gov/sites/default/files/atoms/files/np-2015-10-034-jsc_combustion_in_reduced_gravity-iss-mini-book-011116-508.pdf";
+export const documents = {
+  report: { url: REPORT, name: "NASA/TM-20210011385, BASS-II Summary Report (2021)" },
+  guide: { url: GUIDE, name: "NASA NP-2015-10-034-JSC, A Researcher's Guide to: Combustion Science (2015)" },
+};
+export const reportLink = (source) => `${documents[source.doc]?.url || REPORT}#page=${source.pdfPage}`;
 
 const featuredNotes = {
   B1: "La muestra prendió rápidamente. Se cortó el flujo cuando la llama había recorrido aproximadamente la mitad de la muestra y se extinguió enseguida. El informe describe hollín y un frente de llama azul.",
@@ -21,7 +26,19 @@ const stopWords = new Set(("a al an and are as at be by con como cual cuales cua
 
 // Spanish query stems mapped to the English vocabulary of the report.
 const glossary = [
-  [/^extin|^exting|^apag/, "extinction extinguish quench"],
+  [/^extin|^exting|^apag|^supres|^suprim|^sofoc/, "extinction extinguish quench suppression suppress extinguisher"],
+  [/^fri[oa]s?$/, "cool"],
+  [/^gota/, "droplet droplets"],
+  [/^vela/, "candle"],
+  [/^esfer/, "spherical sphere"],
+  [/^gas(es|eos)?/, "gas gaseous"],
+  [/^premezcl/, "premixed"],
+  [/^supercrit/, "super critical supercritical"],
+  [/^instalaci|^equipo/, "facilities facility hardware rack"],
+  [/^guantera/, "glovebox"],
+  [/^detec/, "detection detector"],
+  [/^boyan|^flotab|^convec/, "buoyancy buoyant convection"],
+  [/^difus/, "diffusion"],
   [/^sopl|^blowoff/, "blowoff"],
   [/^aire|^flujo|^ventil|^corriente/, "flow airflow velocity ventilation"],
   [/^velocidad|^rapid/, "velocity rate speed"],
@@ -104,8 +121,9 @@ const scopes = {
   7: { table: "A.6", label: "T'ien: SIBAL cotton-fiberglass fabric, concurrent flow (tests T)" },
 };
 const general = "All BASS-II: hardware, sensors, combustion products and overall conclusions";
+const guideScope = "2015 overview of NASA microgravity combustion research (droplets, gas flames, solids, fire safety, ISS facilities); written before BASS-II results, not BASS-II test data";
 const majorOf = (section) => String(section ?? "").split(".")[0];
-const scopeOfSection = (section) => scopes[majorOf(section)]?.label || general;
+const scopeOfChunk = (chunk) => (chunk.doc === "guide" ? guideScope : scopes[majorOf(chunk.section)]?.label || general);
 const majorOfTable = (table) => Object.keys(scopes).find((major) => scopes[major].table === table);
 
 /* ---------- Index ---------- */
@@ -134,12 +152,12 @@ export const embeddingConfig = () => (vectorStore ? { model: vectorStore.model, 
 
 function buildCorpus(trials) {
   const passages = (reportChunks.length ? reportChunks : methods).map((chunk) => ({
-    kind: "report", id: chunk.id, pdfPage: chunk.pdfPage, page: chunk.page,
-    section: chunk.section, title: chunk.title, text: chunk.text, scope: scopeOfSection(chunk.section),
+    kind: "report", id: chunk.id, doc: chunk.doc || "report", pdfPage: chunk.pdfPage, page: chunk.page,
+    section: chunk.section, title: chunk.title, text: chunk.text, scope: scopeOfChunk(chunk),
     searchable: `${chunk.title} ${chunk.title} ${chunk.text}`,
   }));
   const tests = trials.filter((trial) => trial.report?.observation).map((trial) => ({
-    kind: "trial", id: trial.id, pdfPage: trial.report.pdfPage, page: trial.report.page, table: trial.report.table,
+    kind: "trial", id: trial.id, doc: "report", pdfPage: trial.report.pdfPage, page: trial.report.page, table: trial.report.table,
     text: trial.report.observation, scope: scopes[majorOfTable(trial.report.table)]?.label || general,
     setup: {
       sample: trial.sample, material: trial.family + " · " + trial.material,
@@ -203,9 +221,9 @@ function semanticScores(docs, queryVector) {
 const order = (scores) => scores.map((score, index) => ({ score, index }))
   .filter(({ score }) => score > 0).sort((a, b) => b.score - a.score);
 
-const publicSource = ({ kind, id, pdfPage, page, table, section, title, text, setup, scope }) => (kind === "trial"
-  ? { id, pdfPage, page, table, text, setup, scope }
-  : { id, pdfPage, page, section, title, text, scope });
+const publicSource = ({ kind, id, doc, pdfPage, page, table, section, title, text, setup, scope }) => (kind === "trial"
+  ? { id, doc, pdfPage, page, table, text, setup, scope }
+  : { id, doc, pdfPage, page, section, title, text, scope });
 
 /**
  * Rank report passages and test observations for a question.
@@ -236,8 +254,13 @@ export function rankEvidence(question, trials, limit = 9, queryVector = null) {
   // A question about named tests only takes passages from those tests' own series
   // (plus the general sections), and fewer of them, so other experiments do not leak in.
   const series = new Set(exact.map((doc) => majorOfTable(doc.table)));
-  const allowed = (doc) => !exact.length || !scopes[majorOf(doc.section)] || series.has(majorOf(doc.section));
+  const allowed = (doc) => !exact.length
+    || (doc.doc !== "guide" && (!scopes[majorOf(doc.section)] || series.has(majorOf(doc.section))));
   const passageCap = exact.length ? 4 : limit;
+  // The guide is background: it may take at most four slots while the report still has candidates.
+  const guideCap = 4;
+  let guideCount = 0;
+  const held = [];
   const picked = [...exact];
   const trialCap = exact.length ? exact.length : Math.ceil(limit / 2);
   let trialCount = exact.length;
@@ -250,9 +273,18 @@ export function rankEvidence(question, trials, limit = 9, queryVector = null) {
       trialCount += 1;
     } else {
       if (passageCount >= passageCap || !allowed(doc)) continue;
+      if (doc.doc === "guide") {
+        if (guideCount >= guideCap) { held.push(doc); continue; }
+        guideCount += 1;
+      }
       passageCount += 1;
     }
     picked.push(doc);
+  }
+  for (const doc of held) {
+    if (picked.length >= limit || passageCount >= passageCap) break;
+    picked.push(doc);
+    passageCount += 1;
   }
   return picked.map(publicSource);
 }

@@ -1,6 +1,10 @@
-"""Build the retrieval index for the BASS-II report (NASA/TM-20210011385).
+"""Build the retrieval index for the two NASA documents in the repository.
 
-Splits the narrative part of the PDF into section-aware passages and writes
+- NASA/TM-20210011385, the BASS-II summary report (test data and analysis).
+- NP-2015-10-034-JSC, "A Researcher's Guide to: Combustion Science" (2015 overview
+  of NASA microgravity combustion research on the ISS).
+
+Splits the narrative part of each PDF into section-aware passages and writes
 dist/chunks.json. With --embed it also calls the OpenAI embeddings API and
 writes dist/vectors.json (int8-quantised, base64) for semantic retrieval.
 
@@ -19,6 +23,9 @@ import pdfplumber
 
 PROJECT = Path(__file__).resolve().parents[1]
 PDF = PROJECT.parent / "TM-20210011385.pdf"
+GUIDE_PDF = PROJECT.parent / "np-2015-10-034-jsc_combustion_in_reduced_gravity-iss-mini-book-011116-508.pdf"
+GUIDE_CONTENTS = (6, 7)        # PDF pages of the table of contents
+GUIDE_BODY = range(8, 49)      # "Why Conduct Combustion Research..." up to the funding and citation pages
 DIST = PROJECT / "dist"
 
 FIRST_BODY_PAGE = 9            # PDF page of printed page 1
@@ -103,7 +110,33 @@ def flush(lines, number, title, page, skip):
             yield number, title, page, " ".join(words[start:start + MAX_WORDS])
 
 
-def build_chunks():
+def read_guide():
+    """Yield (section, title, pdf_page, sentence) for the Researcher's Guide."""
+    with pdfplumber.open(GUIDE_PDF) as doc:
+        pages = {index: (doc.pages[index - 1].dedupe_chars().extract_text() or "")
+                 for index in [*GUIDE_CONTENTS, *GUIDE_BODY]}
+    headings = set()
+    for index in GUIDE_CONTENTS:
+        for line in pages[index].split("\n"):
+            entry = re.match(r"^(.+?)\s+\d{1,2}$", line.strip())
+            if entry:
+                headings.add(entry.group(1).lower())
+    title = "Why Conduct Combustion Research in Microgravity?"
+    for index in GUIDE_BODY:
+        buffer = []
+        for line in pages[index].split("\n"):
+            line = line.strip().replace("ﬂ", "fl").replace("ﬁ", "fi")
+            if not line or re.fullmatch(r"\d{1,4}", line):
+                continue
+            if line.lower() in headings:
+                yield from flush(buffer, "G", title, index, False)
+                buffer, title = [], line
+                continue
+            buffer.append(line)
+        yield from flush(buffer, "G", title, index, False)
+
+
+def build_chunks(sentences, doc, page_offset, label):
     chunks, current, words = [], [], 0
     key = None
 
@@ -111,12 +144,12 @@ def build_chunks():
         nonlocal current, words
         if current and words >= 25:
             number, title, page = key[0], key[1], current[0][0]
-            chunks.append({"section": number, "title": title, "pdfPage": page,
-                           "page": page - FIRST_BODY_PAGE + 1,
+            chunks.append({"doc": doc, "section": number, "title": title, "pdfPage": page,
+                           "page": page - page_offset,
                            "text": " ".join(sentence for _, sentence in current)})
         current, words = [], 0
 
-    for number, title, page, sentence in read_sections():
+    for number, title, page, sentence in sentences:
         if key != (number, title):
             close()
             key = (number, title)
@@ -131,11 +164,18 @@ def build_chunks():
 
     seen = {}
     for chunk in chunks:
-        base = f"{chunk['section']}·p{chunk['page']}"
+        base = label(chunk)
         seen[base] = seen.get(base, 0) + 1
         chunk["id"] = base if seen[base] == 1 else f"{base}{chr(96 + seen[base])}"
-    return [{"id": c["id"], "section": c["section"], "title": c["title"],
+    return [{"id": c["id"], "doc": c["doc"], "section": c["section"], "title": c["title"],
              "pdfPage": c["pdfPage"], "page": c["page"], "text": c["text"]} for c in chunks]
+
+
+def build_all():
+    report = build_chunks(read_sections(), "report", FIRST_BODY_PAGE - 1,
+                          lambda c: f"{c['section']}·p{c['page']}")
+    guide = build_chunks(read_guide(), "guide", 0, lambda c: f"Guide·p{c['page']}")
+    return report + guide
 
 
 def embed(texts, key):
@@ -173,9 +213,10 @@ def main():
     parser.add_argument("--embed", action="store_true", help="also write dist/vectors.json")
     args = parser.parse_args()
 
-    chunks = build_chunks()
+    chunks = build_all()
     (DIST / "chunks.json").write_text(json.dumps(chunks, ensure_ascii=False, indent=0) + "\n", encoding="utf-8")
-    print(f"{len(chunks)} passages -> dist/chunks.json")
+    counts = {doc: sum(c["doc"] == doc for c in chunks) for doc in ("report", "guide")}
+    print(f"{len(chunks)} passages -> dist/chunks.json ({counts['report']} report, {counts['guide']} guide)")
 
     if args.embed:
         key = load_key()
