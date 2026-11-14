@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Explora los ensayos de combustión en microgravedad BASS-II de NASA.">
+  <meta name="description" content="Explore NASA BASS-II microgravity combustion trials, flammability maps, and material hazard rankings.">
   <meta name="theme-color" content="#101311">
-  <title>Flame in Freefall | Atlas BASS-II</title>
+  <title>Flame in Freefall | BASS-II Atlas</title>
   <link rel="icon" href="media/b1.webp">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,14 +14,15 @@
   <script type="module" src="app.js"></script>
 </head>
 <body>
-  <a href="#ensayos" class="skip">Ir a los ensayos</a>
+  <a href="#flammability" class="skip">Skip to flammability map</a>
   <header class="topbar">
     <div class="shell top-inner">
-      <a class="brand" href="#" aria-label="Flame in Freefall, inicio"><span class="brand-mark" aria-hidden="true">✳</span> Flame<span class="muted">/</span>Freefall</a>
-      <nav aria-label="Navegación">
-        <a class="nav-main" href="#ensayos">Ensayos</a>
-        <a href="#grabaciones">Grabaciones</a>
-        <a href="#consulta">Consulta IA</a>
+      <a class="brand" href="#" aria-label="Flame in Freefall, home"><span class="brand-mark" aria-hidden="true">✳</span> Flame<span class="muted">/</span>Freefall</a>
+      <nav aria-label="Primary navigation">
+        <a class="nav-main" href="#flammability">Flammability Map</a>
+        <a href="#trials">Trials</a>
+        <a href="#recordings">Recordings</a>
+        <a href="#assistant">AI Query</a>
       </nav>
       <a class="source-top mono" href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-25" target="_blank" rel="noreferrer">NASA PSI–25 ↗</a>
     </div>
@@ -30,90 +31,125 @@
   <main class="shell">
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-copy">
-        <p class="eyebrow mono"><span aria-hidden="true"></span> NASA BASS-II / ESTACIÓN ESPACIAL INTERNACIONAL</p>
+        <p class="eyebrow mono"><span aria-hidden="true"></span> NASA BASS-II / INTERNATIONAL SPACE STATION</p>
         <h1 id="hero-title">Flame in<br><em>Freefall</em></h1>
-        <p class="hero-description">Explora cómo se encienden, se propagan y se extinguen las llamas en microgravedad.</p>
+        <p class="hero-description">Explore how flames ignite, spread, and extinguish in microgravity across spacecraft materials.</p>
         <div class="metrics">
-          <div><strong id="total-trials">129</strong><span>Registros</span></div>
-          <div><strong>03</strong><span>Grabaciones</span></div>
-          <div><strong>13,6–22,2<span class="unit"> %</span></strong><span>O₂ inicial calibrado</span></div>
+          <div><strong id="total-trials">129</strong><span>Records</span></div>
+          <div><strong>03</strong><span>Recordings</span></div>
+          <div><strong>13.6–22.2<span class="unit"> %</span></strong><span>Calibrated initial O₂</span></div>
         </div>
       </div>
       <figure class="hero-media">
-        <img src="media/hero.webp" alt="Llama luminosa sobre la película de PMMA en el ensayo B1 de NASA">
+        <img src="media/hero.webp" alt="Luminous flame spreading over PMMA film in NASA trial B1">
         <div class="reticle" aria-hidden="true"></div>
-        <figcaption class="mono"><span><i></i> ENSAYO B1</span><span>PMMA · MUESTRA 147</span></figcaption>
-        <button class="hero-play" type="button" data-video="B1"><span aria-hidden="true">▶</span> Ver ensayo</button>
+        <figcaption class="mono"><span><i></i> TRIAL B1</span><span>PMMA · SAMPLE 147</span></figcaption>
+        <button class="hero-play" type="button" data-video="B1"><span aria-hidden="true">▶</span> Watch trial</button>
       </figure>
     </section>
 
-    <div class="workbench">
-      <section id="ensayos" class="panel explorer" aria-labelledby="explorer-title">
+    <section id="flammability" class="flammability-grid" aria-labelledby="flam-title">
+      <div class="panel flam-chart-panel">
         <header class="panel-heading">
-          <div><h2 id="explorer-title">Explorador de ensayos</h2><p>Filtra los registros y selecciona hasta tres para comparar.</p></div>
-          <button class="text-button" id="reset-filters" type="button" hidden>Limpiar filtros</button>
+          <div>
+            <h2 id="flam-title">Flammability Map · O₂ vs. Airflow</h2>
+            <p>Calibrated initial oxygen concentration against airflow velocity by material family. Click any point to inspect the trial.</p>
+          </div>
+          <button class="text-button" id="reset-map-filter" type="button" hidden>Show all materials</button>
         </header>
-        <form id="filters" aria-label="Filtrar ensayos">
-          <label class="search-field"><span>Buscar ensayo</span><input id="query" type="search" placeholder="B1, muestra 147, PMMA…"></label>
-          <label><span>Material</span><select id="material"><option value="">Todos</option></select></label>
-          <label><span>O₂ inicial</span><select id="oxygen">
-            <option value="">Cualquier nivel</option><option value="low">Menos de 18 %</option>
-            <option value="mid">18 a &lt;21 %</option><option value="high">21 % o más</option>
+        <div class="chart-legend" id="chart-legend" role="group" aria-label="Filter chart by material"></div>
+        <div class="chart-stage" id="chart-stage">
+          <svg id="flam-svg" viewBox="0 0 760 400" role="img" aria-label="Scatter plot of initial oxygen percentage versus airflow velocity by material"></svg>
+          <div id="chart-tooltip" class="chart-tooltip" hidden></div>
+        </div>
+        <div class="chart-footer mono">
+          <span id="plotted-count">Plotting valid O₂ &amp; flow records…</span>
+          <span>Dashed lines: 21% Earth O₂ · 18% Hypoxic threshold</span>
+        </div>
+      </div>
+
+      <aside class="panel ranking-panel" aria-labelledby="ranking-title">
+        <header class="panel-heading">
+          <div>
+            <h2 id="ranking-title">Hazard Ranking</h2>
+            <p>Materials ordered by microgravity fire risk (low O₂ threshold, ΔO₂ burn severity &amp; sustained spread).</p>
+          </div>
+        </header>
+        <ol class="hazard-list" id="hazard-list"></ol>
+      </aside>
+    </section>
+
+    <div class="workbench">
+      <section id="trials" class="panel explorer" aria-labelledby="explorer-title">
+        <header class="panel-heading">
+          <div><h2 id="explorer-title">Trial Explorer</h2><p>Filter records and select up to three trials to compare side by side.</p></div>
+          <button class="text-button" id="reset-filters" type="button" hidden>Clear filters</button>
+        </header>
+        <form id="filters" aria-label="Filter trials">
+          <label class="search-field"><span>Search trial</span><input id="query" type="search" placeholder="B1, sample 147, PMMA…"></label>
+          <label><span>Material</span><select id="material"><option value="">All materials</option></select></label>
+          <label><span>Initial O₂</span><select id="oxygen">
+            <option value="">Any level</option><option value="low">Below 18%</option>
+            <option value="mid">18% to &lt;21%</option><option value="high">21% or higher</option>
           </select></label>
-          <label><span>Flujo</span><select id="flow">
-            <option value="">Todos</option><option>Opuesto</option><option>Concurrente</option><option>Estancamiento</option><option value="unknown">Sin confirmar</option>
+          <label><span>Flow direction</span><select id="flow">
+            <option value="">All directions</option>
+            <option value="Opuesto">Opposed</option>
+            <option value="Concurrente">Concurrent</option>
+            <option value="Estancamiento">Stagnant</option>
+            <option value="unknown">Unconfirmed</option>
           </select></label>
         </form>
         <div class="results-bar">
-          <p class="mono" id="result-count" role="status">Cargando ensayos…</p>
-          <label class="video-filter"><input id="video-only" type="checkbox"> Solo con vídeo</label>
+          <p class="mono" id="result-count" role="status">Loading trials…</p>
+          <label class="video-filter"><input id="video-only" type="checkbox"> Video only</label>
         </div>
-        <div class="table-scroll" tabindex="0" role="region" aria-label="Tabla de ensayos">
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Trials table">
           <table>
-            <thead><tr><th scope="col"><span class="sr-only">Comparar</span></th><th scope="col">Ensayo</th><th scope="col">Material</th><th scope="col"><button id="sort-oxygen" type="button">O₂ inicial <span aria-hidden="true">↕</span></button></th><th scope="col">Flujo</th><th scope="col"><span class="sr-only">Vídeo</span></th></tr></thead>
+            <thead><tr><th scope="col"><span class="sr-only">Compare</span></th><th scope="col">Trial</th><th scope="col">Material</th><th scope="col"><button id="sort-oxygen" type="button">Initial O₂ <span aria-hidden="true">↕</span></button></th><th scope="col">Flow</th><th scope="col"><span class="sr-only">Video</span></th></tr></thead>
             <tbody id="trial-rows"></tbody>
           </table>
         </div>
         <div class="pagination">
           <span id="page-label" class="mono"></span>
-          <div><button id="prev" type="button" aria-label="Página anterior">←</button><button id="next" type="button" aria-label="Página siguiente">→</button></div>
+          <div><button id="prev" type="button" aria-label="Previous page">←</button><button id="next" type="button" aria-label="Next page">→</button></div>
         </div>
         <div class="comparison-bar">
-          <div class="selected-controls"><span id="selected" role="status">0 seleccionados</span>
-            <button class="text-button" id="reset-selection" type="button" hidden>Quitar selección</button></div>
-          <button id="compare" class="primary" type="button" disabled>Comparar ensayos <span aria-hidden="true">↗</span></button>
+          <div class="selected-controls"><span id="selected" role="status">0 selected</span>
+            <button class="text-button" id="reset-selection" type="button" hidden>Clear selection</button></div>
+          <button id="compare" class="primary" type="button" disabled>Compare trials <span aria-hidden="true">↗</span></button>
         </div>
       </section>
 
-      <aside id="consulta" class="panel assistant" aria-labelledby="assistant-title">
-        <div class="assistant-head"><span class="assistant-icon" aria-hidden="true">✳</span><div><h2 id="assistant-title">Consulta IA</h2><p class="mono">INFORME NASA/TM-20210011385</p></div></div>
-        <p class="assistant-intro">Pregunta por un resultado de BASS-II y abre las páginas del informe que lo respaldan.</p>
+      <aside id="assistant" class="panel assistant" aria-labelledby="assistant-title">
+        <div class="assistant-head"><span class="assistant-icon" aria-hidden="true">✳</span><div><h2 id="assistant-title">AI Report Query</h2><p class="mono">REPORT NASA/TM-20210011385</p></div></div>
+        <p class="assistant-intro">Ask about a BASS-II experimental finding and jump directly to the supporting NASA report pages.</p>
         <div class="prompts">
-          <button type="button" data-question="¿Qué pasó al cortar el flujo en B1?"><span aria-hidden="true">↳</span> ¿Qué pasó al cortar el flujo en B1?</button>
-          <button type="button" data-question="¿Qué observó NASA en el ensayo F1 con Nomex?"><span aria-hidden="true">↳</span> ¿Qué observó NASA en el ensayo F1?</button>
-          <button type="button" data-question="¿Qué casos de PMMA documentan extinción al reducir o cortar el flujo?"><span aria-hidden="true">↳</span> Extinción del PMMA al reducir el flujo</button>
+          <button type="button" data-question="What happened when airflow was cut off in trial B1?"><span aria-hidden="true">↳</span> What happened when airflow was cut off in B1?</button>
+          <button type="button" data-question="What did NASA observe in trial F1 with Nomex?"><span aria-hidden="true">↳</span> What did NASA observe in trial F1?</button>
+          <button type="button" data-question="Which PMMA cases document extinction when reducing or cutting airflow?"><span aria-hidden="true">↳</span> PMMA extinction when reducing airflow</button>
         </div>
         <form id="ask-form">
-          <label for="question">Tu pregunta</label>
-          <textarea id="question" rows="3" required maxlength="500" placeholder="¿En qué condiciones se propagó la llama?"></textarea>
-          <button class="primary" id="ask" type="submit">Consultar informe <span aria-hidden="true">↑</span></button>
+          <label for="question">Your question</label>
+          <textarea id="question" rows="3" required maxlength="500" placeholder="Under what conditions did the flame spread?"></textarea>
+          <button class="primary" id="ask" type="submit">Query report <span aria-hidden="true">↑</span></button>
         </form>
         <div id="answer" role="status" aria-live="polite"></div>
-        <a class="source-bottom" href="https://ntrs.nasa.gov/api/citations/20210011385/downloads/TM-20210011385.pdf#page=111" target="_blank" rel="noreferrer">Abrir apéndice A ↗</a>
+        <a class="source-bottom" href="https://ntrs.nasa.gov/api/citations/20210011385/downloads/TM-20210011385.pdf#page=111" target="_blank" rel="noreferrer">Open Appendix A ↗</a>
       </aside>
     </div>
 
-    <section id="grabaciones" class="recordings" aria-labelledby="recordings-title">
-      <header class="section-heading"><h2 id="recordings-title">Grabaciones originales</h2><p>NASA / BASS-II</p></header>
+    <section id="recordings" class="recordings" aria-labelledby="recordings-title">
+      <header class="section-heading"><h2 id="recordings-title">Original Recordings</h2><p>NASA / BASS-II</p></header>
       <div class="recording-grid" id="recording-grid"></div>
     </section>
     <footer>
-      <p>Datos de NASA Physical Sciences Informatics · <a href="https://doi.org/10.60555/4qc4-de67" target="_blank" rel="noreferrer">DOI 10.60555/4qc4-de67 ↗</a></p>
-      <p>129 filas en PSI. El informe contabiliza 126 pruebas. Las observaciones corresponden a las condiciones de cada ensayo.</p>
+      <p>Data from NASA Physical Sciences Informatics · <a href="https://doi.org/10.60555/4qc4-de67" target="_blank" rel="noreferrer">DOI 10.60555/4qc4-de67 ↗</a></p>
+      <p>129 rows in PSI. The technical report accounts for 126 tests. Observations reflect each trial's specific conditions.</p>
     </footer>
   </main>
   <dialog id="modal" aria-labelledby="modal-title">
-    <div class="modal-head"><h2 id="modal-title"></h2><form method="dialog"><button class="close" aria-label="Cerrar" type="submit">×</button></form></div>
+    <div class="modal-head"><h2 id="modal-title"></h2><form method="dialog"><button class="close" aria-label="Close" type="submit">×</button></form></div>
     <div id="modal-body"></div>
   </dialog>
 </body>
