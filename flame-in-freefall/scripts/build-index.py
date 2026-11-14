@@ -185,7 +185,7 @@ def main():
         items = [(c["id"], f"{c['title']}. {c['text']}") for c in chunks]
         items += [(t["id"], f"Test {t['id']}, {t['material']}, {t['report'].get('layoutRaw') or ''} flow, "
                             f"{t['initialO2']}% O2. {t['report']['observation']}")
-                  for t in trials if t.get("report", {}).get("observation")]
+                  for t in trials if (t.get("report") or {}).get("observation")]
         vectors = embed([text for _, text in items], key)
         payload = {"model": EMBED_MODEL, "dims": EMBED_DIMS,
                    "vectors": {item_id: quantise(vector) for (item_id, _), vector in zip(items, vectors)}}
