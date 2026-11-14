@@ -1,0 +1,366 @@
+{
+  "B1": [
+    {
+      "label": "Side view",
+      "file": "b1.mp4",
+      "seconds": 44.81,
+      "source": "https://psi.nasa.gov/physci/repo/data/investigations/PSI-25"
+    },
+    {
+      "label": "Still image sequence",
+      "file": "b1-stills.mp4",
+      "seconds": 37.67,
+      "source": "http://flame.sdsu.edu/data/bass/GMT2014_050_BASS_D300s/BASS_GMT50_SAMPLE_147_TEST_B1_Still_Sequence.ts"
+    }
+  ],
+  "B2": [
+    {
+      "label": "Side view",
+      "file": "b2.mp4",
+      "seconds": 57.52,
+      "source": "http://flame.sdsu.edu/data/bass/GMT2014_050_BASS_D300s/BASS_GMT50_SAMPLE_155_TEST_B2.ts"
+    }
+  ],
+  "B3": [
+    {
+      "label": "Side view",
+      "file": "b3.mp4",
+      "seconds": 58.32,
+      "source": "https://psi.nasa.gov/physci/repo/data/investigations/PSI-25"
+    },
+    {
+      "label": "Still image sequence",
+      "file": "b3-stills.mp4",
+      "seconds": 26.23,
+      "source": "http://flame.sdsu.edu/data/bass/GMT2014_050_BASS_D300s/BASS_GMT50_SAMPLE_148_TEST_B3_Still_Sequence.ts"
+    }
+  ],
+  "B4": [
+    {
+      "label": "Side view",
+      "file": "b4.mp4",
+      "seconds": 89.42,
+      "source": "http://flame.sdsu.edu/data/bass/GMT2014_050_BASS_D300s/BASS_GMT50_SAMPLE_159_TEST_B4.ts"
+    },
+    {
+      "label": "Still image sequence",
+      "file": "b4-stills.mp4",
+      "seconds": 41.88,
+      "source": "http://flame.sdsu.edu/data/bass/GMT2014_050_BASS_D300s/BASS_GMT50_SAMPLE_159_TEST_B4_Still_Sequence.ts"
+    }
+  ],
+  "B5": [
+    {
+      "label": "Side view",
+      "file": "b5.mp4",
+      "seconds": 79.65,
+      "source": "http://flame.sdsu.edu/data/bass/GMT2014_050_BASS_D300s/BASS_GMT50_SAMPLE_156_TEST_B5.ts"
+    },
+    {
+      "label": "Still image sequence",
+      "file": "b5-stills.mp4",
+      "seconds": 32.83,
+      "source": "http://flame.sdsu.edu/data/bass/GMT2014_050_BASS_D300s/BASS_GMT50_SAMPLE_156_TEST_B5_Still_Sequence.ts"
+    }
+  ],
+  "B6": [
+    {
+      "label": "Side view",
+      "file": "b6.mp4",
+      "seconds": 72.01,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT188_RTDFS/BASS_GMT188_SAMPLE_153_TESTB6.ts"
+    },
+    {
+      "label": "Second view",
+      "file": "b6-second.mp4",
+      "seconds": 72.47,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT188_RTDFS/BASS_GMT188_SAMPLE_153_TESTB6_2ND_VIEW.ts"
+    },
+    {
+      "label": "Still image sequence",
+      "file": "b6-stills.mp4",
+      "seconds": 30.5,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT188_RTDFS/BASS_GMT188_SAMPLE_153_TESTB6_Still_Sequence.ts"
+    }
+  ],
+  "B7": [
+    {
+      "label": "Side view",
+      "file": "b7.mp4",
+      "seconds": 111.74,
+      "source": "http://flame.sdsu.edu/data/bass/GMT2014_050_BASS_D300s/BASS_GMT50_SAMPLE_161_TEST_B7.ts"
+    },
+    {
+      "label": "Still image sequence",
+      "file": "b7-stills.mp4",
+      "seconds": 50.12,
+      "source": "http://flame.sdsu.edu/data/bass/GMT2014_050_BASS_D300s/BASS_GMT50_SAMPLE_161_TEST_B7_Still_Sequence.ts"
+    }
+  ],
+  "B8": [
+    {
+      "label": "Side view",
+      "file": "b8.mp4",
+      "seconds": 106.44,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT188_RTDFS/BASS_GMT188_SAMPLE_157_TESTB8.ts"
+    },
+    {
+      "label": "Second view",
+      "file": "b8-second.mp4",
+      "seconds": 113.85,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT188_RTDFS/BASS_GMT188_SAMPLE_157_TESTB8_2ND_VIEW.ts"
+    },
+    {
+      "label": "Still image sequence",
+      "file": "b8-stills.mp4",
+      "seconds": 69.3,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT188_RTDFS/BASS_GMT188_SAMPLE_157_TESTB8_Still_Sequence.ts"
+    }
+  ],
+  "B9": [
+    {
+      "label": "Side view",
+      "file": "b9.mp4",
+      "seconds": 43.84,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT188_RTDFS/BASS_GMT188_SAMPLE_154_TESTB9.ts"
+    },
+    {
+      "label": "Second view",
+      "file": "b9-second.mp4",
+      "seconds": 41.88,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT188_RTDFS/BASS_GMT188_SAMPLE_154_TESTB9_2ND_VIEW.ts"
+    }
+  ],
+  "B10": [
+    {
+      "label": "Side view",
+      "file": "b10.mp4",
+      "seconds": 160.06,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT188_RTDFS/BASS_GMT188_SAMPLE_173_TESTB10.ts"
+    },
+    {
+      "label": "Second view",
+      "file": "b10-second.mp4",
+      "seconds": 157.92,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT188_RTDFS/BASS_GMT188_SAMPLE_173_TESTB10_2ND_VIEW.ts"
+    },
+    {
+      "label": "Still image sequence",
+      "file": "b10-stills.mp4",
+      "seconds": 28.43,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT188_RTDFS/BASS_GMT188_SAMPLE_173_TESTB10_Still_Sequence.ts"
+    }
+  ],
+  "B11": [
+    {
+      "label": "Side view",
+      "file": "b11.mp4",
+      "seconds": 152.39,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT188_RTDFS/BASS_GMT188_SAMPLE_158_TESTB11.ts"
+    },
+    {
+      "label": "Second view",
+      "file": "b11-second.mp4",
+      "seconds": 149.85,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT188_RTDFS/BASS_GMT188_SAMPLE_158_TESTB11_2ND_VIEW.ts"
+    },
+    {
+      "label": "Still image sequence",
+      "file": "b11-stills.mp4",
+      "seconds": 33.7,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT188_RTDFS/BASS_GMT188_SAMPLE_158_TESTB11_Still_Sequence.ts"
+    }
+  ],
+  "B12": [
+    {
+      "label": "Side view",
+      "file": "b12.mp4",
+      "seconds": 93.49,
+      "source": "http://flame.sdsu.edu/data/bass/GMT2014_050_BASS_D300s/BASS_GMT50_SAMPLE_160_TEST_B12.ts"
+    },
+    {
+      "label": "Still image sequence",
+      "file": "b12-stills.mp4",
+      "seconds": 42.91,
+      "source": "http://flame.sdsu.edu/data/bass/GMT2014_050_BASS_D300s/BASS_GMT50_SAMPLE_160_TEST_B12_Still_Sequence.ts"
+    }
+  ],
+  "B13": [
+    {
+      "label": "Side view",
+      "file": "b13.mp4",
+      "seconds": 233.47,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT188_RTDFS/BASS_GMT188_SAMPLE_162_TESTB13.ts"
+    },
+    {
+      "label": "Second view",
+      "file": "b13-second.mp4",
+      "seconds": 229.13,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT188_RTDFS/BASS_GMT188_SAMPLE_162_TESTB13_2ND_VIEW.ts"
+    },
+    {
+      "label": "Still image sequence",
+      "file": "b13-stills.mp4",
+      "seconds": 32.27,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT188_RTDFS/BASS_GMT188_SAMPLE_162_TESTB13_Still_Sequence.ts"
+    }
+  ],
+  "B14": [
+    {
+      "label": "Side view",
+      "file": "b14.mp4",
+      "seconds": 72.01,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT183_RTDFS/BASS_GMT183_SAMPLE_174_TESTB14.ts"
+    },
+    {
+      "label": "Second view",
+      "file": "b14-second.mp4",
+      "seconds": 71.44,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT183_RTDFS/BASS_GMT183_SAMPLE_174_TESTB14_2ND_VIEW.ts"
+    }
+  ],
+  "B15": [
+    {
+      "label": "Side view",
+      "file": "b15.mp4",
+      "seconds": 77.61,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT188_RTDFS/BASS_GMT188_SAMPLE_149_TESTB15.ts"
+    },
+    {
+      "label": "Second view",
+      "file": "b15-second.mp4",
+      "seconds": 75.14,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT188_RTDFS/BASS_GMT188_SAMPLE_149_TESTB15_2ND_VIEW.ts"
+    },
+    {
+      "label": "Still image sequence",
+      "file": "b15-stills.mp4",
+      "seconds": 40.84,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT188_RTDFS/BASS_GMT188_SAMPLE_149_TESTB15_Still_Sequence.ts"
+    }
+  ],
+  "B16": [
+    {
+      "label": "Side view",
+      "file": "b16.mp4",
+      "seconds": 135.13,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT183_RTDFS/BASS_GMT183_SAMPLE_150_TESTB16.ts"
+    },
+    {
+      "label": "Second view",
+      "file": "b16-second.mp4",
+      "seconds": 134.73,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT183_RTDFS/BASS_GMT183_SAMPLE_150_TESTB16_2ND_VIEW.ts"
+    }
+  ],
+  "B17": [
+    {
+      "label": "Side view",
+      "file": "b17.mp4",
+      "seconds": 243.91,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT183_RTDFS/BASS_GMT183_SAMPLE_175_TESTB17.ts"
+    },
+    {
+      "label": "Second view",
+      "file": "b17-second.mp4",
+      "seconds": 243.64,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT183_RTDFS/BASS_GMT183_SAMPLE_175_TESTB17_2ND_VIEW.ts"
+    }
+  ],
+  "B18": [
+    {
+      "label": "Side view",
+      "file": "b18.mp4",
+      "seconds": 174.94,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT183_RTDFS/BASS_GMT183_SAMPLE_176_TESTB18.ts"
+    },
+    {
+      "label": "Second view",
+      "file": "b18-second.mp4",
+      "seconds": 172.31,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT183_RTDFS/BASS_GMT183_SAMPLE_176_TESTB18_2ND_VIEW.ts"
+    },
+    {
+      "label": "Still image sequence",
+      "file": "b18-stills.mp4",
+      "seconds": 31.6,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT183_RTDFS/BASS_GMT183_SAMPLE_176_TESTB18_Still_Sequence.ts"
+    }
+  ],
+  "B19": [
+    {
+      "label": "Side view",
+      "file": "b19.mp4",
+      "seconds": 92.76,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT183_RTDFS/BASS_GMT183_SAMPLE_151_TESTB19.ts"
+    },
+    {
+      "label": "Second view",
+      "file": "b19-second.mp4",
+      "seconds": 93.09,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT183_RTDFS/BASS_GMT183_SAMPLE_151_TESTB19_2ND_VIEW.ts"
+    },
+    {
+      "label": "Still image sequence",
+      "file": "b19-stills.mp4",
+      "seconds": 49.35,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT183_RTDFS/BASS_GMT183_SAMPLE_151_TESTB19_Still_Sequence.ts"
+    }
+  ],
+  "B20": [
+    {
+      "label": "Side view",
+      "file": "b20.mp4",
+      "seconds": 123.16,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT183_RTDFS/BASS_GMT183_SAMPLE_152_TESTB20.ts"
+    },
+    {
+      "label": "Second view",
+      "file": "b20-second.mp4",
+      "seconds": 115.15,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT183_RTDFS/BASS_GMT183_SAMPLE_152_TESTB20_2ND_VIEW.ts"
+    },
+    {
+      "label": "Still image sequence",
+      "file": "b20-stills.mp4",
+      "seconds": 82.92,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT183_RTDFS/BASS_GMT183_SAMPLE_152_TESTB20_Still_Sequence.ts"
+    }
+  ],
+  "B21": [
+    {
+      "label": "Side view",
+      "file": "b21.mp4",
+      "seconds": 166.27,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT216_RTDFS_Tests_B21+B22/BASS_GMT216_SAMPLE_174_TEST_B21.ts"
+    },
+    {
+      "label": "Second view",
+      "file": "b21-second.mp4",
+      "seconds": 163.4,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT216_RTDFS_Tests_B21+B22/BASS_GMT216_SAMPLE_174_TEST_B21_2ND_VIEW.ts"
+    }
+  ],
+  "B22": [
+    {
+      "label": "Side view",
+      "file": "b22.mp4",
+      "seconds": 133.17,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT216_RTDFS_Tests_B21+B22/BASS_GMT216_SAMPLE_176_TEST_B22.ts"
+    },
+    {
+      "label": "Second view",
+      "file": "b22-second.mp4",
+      "seconds": 132.73,
+      "source": "http://flame.sdsu.edu/data/bass/BASS_GMT216_RTDFS_Tests_B21+B22/BASS_GMT216_SAMPLE_176_TEST_B22_2ND_VIEW.ts"
+    }
+  ],
+  "F1": [
+    {
+      "label": "Side view",
+      "file": "f1.mp4",
+      "seconds": 78.24,
+      "source": "https://psi.nasa.gov/physci/repo/data/investigations/PSI-25"
+    }
+  ]
+}

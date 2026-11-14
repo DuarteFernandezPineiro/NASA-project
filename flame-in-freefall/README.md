@@ -1,6 +1,6 @@
 # Flame in Freefall
 
-Panel en español para explorar los ensayos de BASS-II en la Estación Espacial Internacional. Incluye filtros, comparación de hasta tres ensayos y las grabaciones originales B1, B3 y F1.
+Panel para explorar los ensayos de BASS-II en la Estación Espacial Internacional. Incluye un mapa de inflamabilidad, filtros, comparación de hasta tres ensayos, resultados y grabaciones vinculadas a las fichas.
 
 ## Abrir en local
 
@@ -30,7 +30,7 @@ La respuesta de IA se genera a partir de los pasajes recuperados e incluye una i
 
 ## Fuentes
 
-- El [catálogo PSI-25](https://doi.org/10.60555/4qc4-de67) aporta 129 registros y las tres grabaciones incluidas.
+- El [catálogo PSI-25](https://doi.org/10.60555/4qc4-de67) aporta 129 registros y las grabaciones iniciales de B1, B3 y F1. Las vistas y secuencias adicionales proceden del [archivo BASS-II de SDSU](http://flame.sdsu.edu/bass.html), citado en la sección 2.1.2 del informe de NASA. Se convierten a MP4 para reproducción web. El catálogo `dist/media/catalog.json` conserva las fuentes y duraciones.
 - El [informe NASA/TM-20210011385](https://ntrs.nasa.gov/citations/20210011385) documenta los resultados. El cruce por identificador de ensayo y muestra enlaza 126 filas con las tablas del apéndice A. Los registros O20, O21 y O22 solo llevan la ficha del CSV.
 - Los valores de los instrumentos se muestran tal como se publicaron. En particular, `Air display` puede reflejar un punto, una secuencia o una anotación. Para el filtro de dirección se usa la matriz de NASA cuando especifica un flujo opuesto, concurrente o de estancamiento.
 - Para regenerar `dist/trials.json`, usa Python con `pdfplumber` y ejecuta `python scripts/import-data.py`. El script lee el PDF y CSV originales en la carpeta superior.
