@@ -15,7 +15,7 @@ const featuredNotes = {
 // Short report passages that complement the complete index.
 export const methods = [
   { id: "methods", section: "1.2", pdfPage: 13, page: 5, title: "Experiment Description", text: "The video overlay displayed the air velocity transducer reading in cm/s, fan voltage and radiometer signal. The fan voltage was calibrated against the airspeed transducer at the end of every operations day. The radiometer signal was uncalibrated and served to observe flame dynamics and steadiness." },
-  { id: "gases", section: "1.4", pdfPage: 14, page: 6, title: "Combustion Products", text: "O2, CO2 and CO sensor readings were taken before and after each test. Nitrogen dilution was used to reach lower O2 levels in the working volume." },
+  { id: "gases", section: "1.4", pdfPage: 14, page: 6, title: "Combustion Products", text: "O2, CO2 and CO sensor readings were taken before and after each test. Gaseous nitrogen from the ISS was used to dilute the atmosphere in the working volume and lower its O2 concentration." },
   { id: "gravity", section: "2.3.7", pdfPage: 48, page: 40, title: "Results and Discussion", text: "Section 2.3.7 compares a normal-gravity, downward PMMA spread experiment with the ISS microgravity sample. In this comparison for 100 µm PMMA the normal-gravity average was 2.0 mm/s. The highest measured microgravity spread value was about 2.2 mm/s under the tested conditions." },
 ];
 
@@ -225,6 +225,15 @@ const publicSource = ({ kind, id, doc, pdfPage, page, table, section, title, tex
   ? { id, doc, pdfPage, page, table, text, setup, scope }
   : { id, doc, pdfPage, page, section, title, text, scope });
 
+export function namedTrialEvidence(question, trials) {
+  const asked = new Set(normalize(question).match(/\b[a-z]{1,2}\d{1,2}[a-z]?\b/g) || []);
+  // Keep the oxygen symbol separate from trial O2.
+  const explicitTrialO2 = /\b(?:ensayos?|tests?|trials?)\s+o2\b/i.test(question)
+    || /^\s*o2\s*[?.!]?\s*$/i.test(question);
+  return corpusFor(trials).docs.filter((doc) => doc.kind === "trial" && asked.has(doc.id.toLowerCase())
+    && (doc.id !== "O2" || explicitTrialO2));
+}
+
 /**
  * Rank report passages and test observations for a question.
  * Lexical BM25 always runs; when a query embedding is supplied and vectors are
@@ -233,12 +242,7 @@ const publicSource = ({ kind, id, doc, pdfPage, page, table, section, title, tex
 export function rankEvidence(question, trials, limit = 9, queryVector = null) {
   const corpus = corpusFor(trials);
   const { docs } = corpus;
-  const asked = new Set((normalize(question).match(/\b[a-z]{1,2}\d{1,2}\b/g) || []));
-  // The chemical symbol O₂ folds to the test ID O2 during normalization.
-  const explicitTrialO2 = /\b(?:ensayos?|tests?|trials?)\s+o2\b/i.test(question)
-    || /^\s*o2\s*[?.!]?\s*$/i.test(question);
-  const exact = docs.filter((doc) => doc.kind === "trial" && asked.has(doc.id.toLowerCase())
-    && (doc.id !== "O2" || explicitTrialO2));
+  const exact = namedTrialEvidence(question, trials);
 
   const lexical = order(lexicalScores(corpus, queryTerms(question)));
   const semanticRaw = semanticScores(docs, queryVector);
