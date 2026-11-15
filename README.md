@@ -4,6 +4,12 @@
 
 An interactive dashboard that explores and summarizes the 129 trials of NASA's **Burning and Suppression of Solids–II (BASS-II)** experiment on the International Space Station, and answers questions about them with citations to the original NASA pages.
 
+## Submission demo
+
+- [Seven-slide presentation (PDF)](submission/Flame-in-Freefall.pdf)
+- [Flame in Freefall application (restricted access)](https://flame-in-freefall-bass-ii.knowingpanda2.chatgpt.site)
+- [AI and generated data disclosure](submission/AI-DISCLOSURE.md)
+
 ## What it does
 
 - **Trial map.** Initial calibrated O₂ and single airflow readings, with markers for ignition yes, no or unknown. An optional overlay shows the uncertainty ranges for the thin-PMMA experiments in NASA Table 2.1. The map reports excluded records; the explorer retains the original airflow entries.
