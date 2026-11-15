@@ -6,11 +6,12 @@ BASS-II table in the repository root, and writes dist/psi-extra.json.
     python scripts/import-psi-extra.py
 """
 
-import csv
 import json
 import re
 from collections import Counter
 from pathlib import Path
+
+from psi_csv import read_table
 
 PROJECT = Path(__file__).resolve().parents[1]
 ROOT = PROJECT.parent
@@ -20,17 +21,17 @@ SOURCES = {
     "flex": {
         "psi": "PSI-69",
         "doi": "10.60555/mbq8-0451",
-        "file": "PSI-69_Experimental_table_FLEX.csv",
+        "file": "PSI-69_Experimental table_FLEX.csv",
     },
     "saffire2": {
         "psi": "PSI-99",
         "doi": "10.60555/2chp-m469",
-        "file": "PSI-99_Experimental_table_SAFFIRE-2.csv",
+        "file": "PSI-99_Experimental table_SAFFIRE-2.csv",
     },
     "bass": {
         "psi": "PSI-26",
         "doi": "10.60555/58h4-dy80",
-        "file": "PSI-26_Experimental_table_BASS.csv",
+        "file": "PSI-26_Experimental table_BASS.csv",
     },
 }
 
@@ -41,13 +42,8 @@ def number(value):
 
 
 def read(name):
-    raw = (ROOT / SOURCES[name]["file"]).read_bytes()
-    text = (
-        raw.decode("utf-8-sig")
-        if raw.startswith(b"\xef\xbb\xbf")
-        else raw.decode("cp1252", errors="replace")
-    )
-    return list(csv.reader(text.splitlines()))
+    header, rows = read_table(ROOT / SOURCES[name]["file"])
+    return [header, *(values for _, values in rows)]
 
 
 def flex():

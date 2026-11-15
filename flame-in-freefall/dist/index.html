@@ -23,6 +23,7 @@
         <a href="#exploration">Exploration Advisor</a>
         <a href="#timeline">Decades of NASA</a>
         <a href="#investigations">Investigations</a>
+        <a href="#datasets">PSI Tables</a>
         <a href="#beyond">FLEX &amp; Saffire</a>
         <a href="#trials">Trials</a>
         <a href="#recordings">Recordings</a>
@@ -177,7 +178,7 @@
       <header class="panel-heading">
         <div>
           <h2 id="inv-title">Investigations at a Glance</h2>
-          <p>NASA microgravity combustion investigations compared by what burned, how, and which part of fire safety they inform. Only BASS-II has trial-level data in this dashboard; the rest is cited context. Each row links to its NASA Physical Sciences Informatics (PSI) record by DOI.</p>
+          <p>NASA microgravity combustion investigations compared by what burned, how, and which part of fire safety they inform. Source links open NASA records. Table links open the corresponding CSV in the PSI data explorer.</p>
         </div>
         <div class="front-filters" role="group" aria-label="Filter by fire safety area">
           <button type="button" class="legend-pill" data-front="">All</button>
@@ -194,6 +195,48 @@
         </table>
       </div>
       <p class="ranking-note">Habitat relevance is a team assessment for crewed spacecraft and lunar habitats, not a NASA rating.</p>
+    </section>
+
+    <section id="datasets" class="panel datasets" aria-labelledby="datasets-title">
+      <header class="panel-heading">
+        <div>
+          <h2 id="datasets-title">PSI Data Explorer</h2>
+          <p id="psi-coverage">NASA Physical Sciences Informatics experimental tables</p>
+        </div>
+      </header>
+      <div class="dataset-controls">
+        <label><span>Dataset</span><select id="psi-table" disabled></select></label>
+        <label><span>Search the selected table</span><input id="psi-query" type="search" placeholder="Fuel, sample, or source line…" disabled></label>
+        <label><span>Record type</span><select id="psi-type" disabled><option>All record types</option></select></label>
+      </div>
+      <div id="psi-details" hidden>
+        <div class="dataset-profile">
+          <div>
+            <h3 id="psi-name"></h3>
+            <p id="psi-counts" class="mono"></p>
+            <p id="psi-file"></p>
+            <p id="psi-note"></p>
+          </div>
+          <a id="psi-source" class="citation" target="_blank" rel="noreferrer"></a>
+        </div>
+        <p class="dataset-guide">Units follow the source headers and cells. A dash marks an empty cell. Scroll across to see every column.</p>
+        <div class="table-scroll dataset-scroll" role="region" aria-label="PSI experimental table" tabindex="0">
+          <table class="dataset-table">
+            <caption id="psi-caption" class="sr-only"></caption>
+            <thead id="psi-head"></thead>
+            <tbody id="psi-rows"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="dataset-footer">
+        <p id="psi-status" class="mono" role="status" aria-live="polite">Loading PSI tables…</p>
+        <div>
+          <span id="psi-page" class="mono"></span>
+          <button id="psi-prev" aria-label="Previous PSI page" type="button" disabled>←</button>
+          <button id="psi-next" aria-label="Next PSI page" type="button" disabled>→</button>
+          <button id="psi-download" class="primary" type="button" disabled>Download table CSV</button>
+        </div>
+      </div>
     </section>
 
     <section id="beyond" class="panel beyond" aria-labelledby="beyond-title">
