@@ -22,6 +22,8 @@
         <a class="nav-main" href="#flammability">Flammability Map</a>
         <a href="#exploration">Exploration Advisor</a>
         <a href="#timeline">Decades of NASA</a>
+        <a href="#investigations">Investigations</a>
+        <a href="#beyond">FLEX &amp; Saffire</a>
         <a href="#trials">Trials</a>
         <a href="#recordings">Recordings</a>
         <a href="#assistant">AI Query</a>
@@ -51,7 +53,7 @@
     </section>
 
     <section class="findings" aria-labelledby="findings-title">
-      <h2 id="findings-title" class="mono">FINDINGS FROM THE NASA REPORT</h2>
+      <h2 id="findings-title" class="mono">FINDINGS FROM NASA DATA</h2>
       <ol class="findings-list">
         <li>
           <strong>PMMA rod tests</strong>
@@ -72,6 +74,16 @@
           <strong>The lunar gap</strong>
           <p>The PMMA comparison covers downward spread in normal gravity and experiments in ISS microgravity. Lunar gravity remains untested in this series.</p>
           <a class="citation" href="https://ntrs.nasa.gov/api/citations/20210011385/downloads/TM-20210011385.pdf#page=48" target="_blank" rel="noreferrer">NASA TM · §2.3.7 · p. 40 ↗</a>
+        </li>
+        <li>
+          <strong>FLEX droplets at 30–34% O₂</strong>
+          <p>In FLEX, <b>24 droplet tests</b> ran at 30–34% O₂, 17 of them near 10.4 psi. <b>2 of the 24</b> ended in flame extinction; the rest ended with the fuel consumed or the droplet disrupted. At ≤15% O₂, <b>45 of 48</b> ended in extinction.</p>
+          <a class="citation" href="https://doi.org/10.60555/mbq8-0451" target="_blank" rel="noreferrer">FLEX · PSI-69 ↗</a>
+        </li>
+        <li>
+          <strong>Saffire-II silicone samples</strong>
+          <p>At about 22% O₂ and 20 cm/s, the <b>four silicone samples</b> showed no burn length in microgravity. In the normal-gravity comparison, <b>two burned completely</b> and one burned 7.6 cm.</p>
+          <a class="citation" href="https://doi.org/10.60555/2chp-m469" target="_blank" rel="noreferrer">Saffire-II · PSI-99 ↗</a>
         </li>
       </ol>
     </section>
@@ -158,6 +170,63 @@
       <div class="timeline-body">
         <div class="timeline-nav" id="timeline-nav" role="tablist" aria-label="Select historical era"></div>
         <div class="timeline-card" id="timeline-card" role="tabpanel"></div>
+      </div>
+    </section>
+
+    <section id="investigations" class="panel investigations" aria-labelledby="inv-title">
+      <header class="panel-heading">
+        <div>
+          <h2 id="inv-title">Investigations at a Glance</h2>
+          <p>NASA microgravity combustion investigations compared by what burned, how, and which part of fire safety they inform. Only BASS-II has trial-level data in this dashboard; the rest is cited context. Each row links to its NASA Physical Sciences Informatics (PSI) record by DOI.</p>
+        </div>
+        <div class="front-filters" role="group" aria-label="Filter by fire safety area">
+          <button type="button" class="legend-pill" data-front="">All</button>
+          <button type="button" class="legend-pill" data-front="prevention">Prevention</button>
+          <button type="button" class="legend-pill" data-front="detection">Detection</button>
+          <button type="button" class="legend-pill" data-front="suppression">Suppression</button>
+        </div>
+      </header>
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Investigations comparison">
+        <table class="investigations-table">
+          <colgroup><col class="c-name"><col class="c-front"><col class="c-fuel"><col class="c-hw"><col class="c-var"><col class="c-res"><col class="c-rel"><col class="c-src"></colgroup>
+          <thead><tr><th scope="col">Investigation</th><th scope="col">Fire safety area</th><th scope="col">What burned</th><th scope="col">Hardware</th><th scope="col">What varied</th><th scope="col">Key result</th><th scope="col">Habitat relevance</th><th scope="col">Sources</th></tr></thead>
+          <tbody id="investigation-rows"></tbody>
+        </table>
+      </div>
+      <p class="ranking-note">Habitat relevance is a team assessment for crewed spacecraft and lunar habitats, not a NASA rating.</p>
+    </section>
+
+    <section id="beyond" class="panel beyond" aria-labelledby="beyond-title">
+      <header class="panel-heading">
+        <div>
+          <h2 id="beyond-title">Beyond BASS-II: Suppression and Scale</h2>
+          <p>Test-level data from three more PSI investigations. FLEX burned liquid fuel droplets in still air, with and without CO₂ or helium added as suppressants; Saffire-II burned larger solid samples and compared them with normal-gravity tests.</p>
+        </div>
+      </header>
+      <div class="beyond-grid">
+        <figure class="beyond-chart">
+          <figcaption><strong>FLEX droplet tests · O₂ vs. pressure</strong><span>Filled = test ended in flame extinction · ring = fuel consumed or droplet disrupted</span></figcaption>
+          <div class="flex-legend mono"><span><i style="background:#94a3b8"></i>O₂/N₂ only</span><span><i style="background:#fb923c"></i>+ CO₂</span><span><i style="background:#38bdf8"></i>+ Helium</span></div>
+          <svg id="flex-svg" viewBox="0 0 620 360" role="img" aria-label="FLEX tests by initial oxygen and chamber pressure, with the lunar habitat target"></svg>
+          <p class="chart-footer mono" id="flex-count"></p>
+          <a class="citation" href="https://doi.org/10.60555/mbq8-0451" target="_blank" rel="noreferrer">FLEX experimental table · PSI-69 · doi:10.60555/mbq8-0451 ↗</a>
+        </figure>
+        <div class="beyond-side">
+          <h3>FLEX tests ending in flame extinction</h3>
+          <p class="muted">Share of FLEX tests ending in flame extinction, by initial O₂. Fuels, pressures and droplet sizes vary between bands, so this is descriptive, not a fitted limit.</p>
+          <div id="flex-bands" class="flex-bands"></div>
+          <h3>Saffire-II · same samples, microgravity vs. Earth</h3>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Saffire-II results">
+            <table class="saffire-table">
+              <thead><tr><th scope="col">Sample</th><th scope="col">Material</th><th scope="col">Thickness</th><th scope="col">Flow</th><th scope="col">Burned in µg</th><th scope="col">Burned in 1 g</th></tr></thead>
+              <tbody id="saffire-rows"></tbody>
+            </table>
+          </div>
+          <p class="ranking-note">About 22% O₂, 20 cm/s airflow. * Material cell blank in the PSI table, taken from the row above. Values as published, including "037 mm". <a class="citation" href="https://doi.org/10.60555/2chp-m469" target="_blank" rel="noreferrer">Saffire-II · PSI-99 ↗</a></p>
+          <h3>BASS (2012–2013)</h3>
+          <p class="muted" id="bass-summary"></p>
+          <a class="citation" href="https://doi.org/10.60555/58h4-dy80" target="_blank" rel="noreferrer">BASS · PSI-26 ↗</a>
+        </div>
       </div>
     </section>
 
