@@ -1,4 +1,4 @@
-import { findEvidence, reportLink } from "./evidence.js";
+import { findEvidence, loadIndex, reportLink } from "./evidence.js";
 
 const byId = (id) => document.getElementById(id);
 const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({
@@ -66,6 +66,21 @@ function formatField(label, value) {
    FLAMMABILITY MAP (OXYGEN VS. AIRFLOW BY MATERIAL) & HAZARD RANKING
    ========================================================================== */
 
+// Outcome of a trial from the structured fields extracted from Appendix A (part B).
+// "brief" = a flash or a flame that only lived while the igniter was on.
+const BRIEF_FLAME = new Set(["transient_flame", "igniter_still_on", "igniter_removed"]);
+function outcomeOf(trial) {
+  if (trial.ignited === false) return "none";
+  if (trial.ignited === true) return BRIEF_FLAME.has(trial.extinction) ? "brief" : "sustained";
+  return "undocumented";
+}
+const OUTCOME_LABEL = {
+  sustained: "Sustained flame",
+  brief: "Brief flame only",
+  none: "Did not ignite",
+  undocumented: "Outcome not documented",
+};
+
 function computeMaterialStats() {
   const groups = new Map();
   for (const t of trials) {
@@ -76,10 +91,12 @@ function computeMaterialStats() {
 
   const stats = [];
   for (const [family, list] of groups.entries()) {
-    const o2Values = list.map((t) => t.initialO2).filter((v) => v != null);
+    const documented = list.filter((t) => outcomeOf(t) !== "undocumented");
+    const sustained = list.filter((t) => outcomeOf(t) === "sustained");
+    const sustainedO2 = sustained.map((t) => t.initialO2).filter((v) => v != null);
     const flowValues = list.map((t) => parseNumeric(t.air)).filter((v) => v != null);
 
-    // Filter valid ΔO2 consumption (exclude sensor glitches like P22a/T28a where final O2 drops below 10%)
+    // Oxygen consumed during the test (excluding sensor glitches where final O2 drops below 10%)
     const deltaO2List = list.map((t) => {
       const init = parseNumeric(t.gasReadings?.[0]) ?? t.initialO2;
       const fin = parseNumeric(t.gasReadings?.[1]);
@@ -88,30 +105,17 @@ function computeMaterialStats() {
       return delta <= 6 ? delta : null;
     }).filter((v) => v != null);
 
-    // Count trials that sustained flame beyond initial igniter flash
-    const sustainedCount = list.filter((t) => {
-      const obs = (t.report?.observation || "").toLowerCase();
-      if (!obs || /^-+$/.test(obs)) return true;
-      return !/(no ignition|did not ignite|failed to ignite|no sustained flame|would not sustain|would not stay lit|brief ignition.*extinguished|briefly flashed then went out|brief flames go out|extinguished immediately)/i.test(obs);
-    }).length;
+    // Lowest oxygen at which a flame was actually sustained (not merely the lowest level tested).
+    const minBurnO2 = sustainedO2.length ? Math.min(...sustainedO2) : null;
+    const sustainRate = documented.length ? sustained.length / documented.length : 0;
+    const avgDeltaO2 = deltaO2List.length ? deltaO2List.reduce((a, b) => a + b, 0) / deltaO2List.length : 0;
 
-    const minO2 = o2Values.length ? Math.min(...o2Values) : 21.0;
-    const maxO2 = o2Values.length ? Math.max(...o2Values) : null;
-    const minFlow = flowValues.length ? Math.min(...flowValues) : null;
-    const maxFlow = flowValues.length ? Math.max(...flowValues) : null;
-    const avgDeltaO2 = deltaO2List.length
-      ? deltaO2List.reduce((a, b) => a + b, 0) / deltaO2List.length
-      : 0.2;
-    const sustainRate = list.length ? sustainedCount / list.length : 0;
-
-    // Composite Hazard Score (0-100):
-    // 1. Hypoxic ignition capability: lower min O2 threshold -> higher risk (up to 55 pts)
-    // 2. Sustained propagation rate across tests (up to 30 pts)
-    // 3. Mean oxygen depletion ΔO2 (up to 15 pts)
-    const o2Risk = Math.max(0, Math.min(55, ((22.5 - minO2) / 9.0) * 55));
-    const sustainRisk = sustainRate * 30;
-    const burnRisk = Math.min(15, avgDeltaO2 * 14);
-    const hazardScore = Math.round(o2Risk + sustainRisk + burnRisk);
+    // Heuristic score (0-100), built only from documented outcomes:
+    // 1. Lowest O2 with a sustained flame: the lower, the riskier (up to 55 pts)
+    // 2. Share of documented trials with a sustained flame (up to 30 pts)
+    // 3. Mean oxygen consumed per test (up to 15 pts)
+    const o2Risk = minBurnO2 == null ? 0 : Math.max(0, Math.min(55, ((22.5 - minBurnO2) / 9.0) * 55));
+    const hazardScore = Math.round(o2Risk + sustainRate * 30 + Math.min(15, avgDeltaO2 * 14));
 
     let tier = { label: "Low", className: "risk-low" };
     if (hazardScore >= 72) tier = { label: "Critical", className: "risk-critical" };
@@ -122,28 +126,29 @@ function computeMaterialStats() {
       family,
       label: formatFamily(family),
       count: list.length,
-      minO2: o2Values.length ? minO2 : null,
-      maxO2,
-      minFlow,
-      maxFlow,
-      sustainRate,
+      documented: documented.length,
+      sustained: sustained.length,
+      minBurnO2,
+      minFlow: flowValues.length ? Math.min(...flowValues) : null,
+      maxFlow: flowValues.length ? Math.max(...flowValues) : null,
+      lowConfidence: documented.length < 5,
       hazardScore,
       tier
     });
   }
 
-  return stats.sort((a, b) => b.hazardScore - a.hazardScore || (a.minO2 ?? 99) - (b.minO2 ?? 99));
+  return stats.sort((a, b) => b.hazardScore - a.hazardScore || (a.minBurnO2 ?? 99) - (b.minBurnO2 ?? 99));
 }
 
 function renderHazardRanking(stats) {
   const listEl = byId("hazard-list");
   listEl.innerHTML = stats.map((item, idx) => {
     const color = materialColors.get(item.family) || "#d6f682";
-    const o2Range = item.minO2 != null ? `Min O₂: ${number.format(item.minO2)}%` : "Min O₂: —";
+    const o2Range = item.minBurnO2 != null ? `Sustained down to ${number.format(item.minBurnO2)}% O₂` : "No sustained flame";
     const flowRange = (item.minFlow != null && item.maxFlow != null)
-      ? `Flow: ${number.format(item.minFlow)}–${number.format(item.maxFlow)} cm/s`
+      ? (item.minFlow === item.maxFlow ? `Flow: ${number.format(item.minFlow)} cm/s` : `Flow: ${number.format(item.minFlow)}–${number.format(item.maxFlow)} cm/s`)
       : "Flow: —";
-    const trialWord = item.count === 1 ? "trial" : "trials";
+    const evidence = `${item.sustained}/${item.documented} documented trials burned (${item.count} total)`;
     const isActive = activeMapMaterial === item.family;
 
     return `<li class="hazard-item">
@@ -154,7 +159,8 @@ function renderHazardRanking(stats) {
           <div class="hazard-meta">
             <span>${o2Range}</span>
             <span>${flowRange}</span>
-            <span>${item.count} ${trialWord}</span>
+            <span>${evidence}</span>
+            ${item.lowConfidence ? '<span class="low-confidence">Few trials · low confidence</span>' : ""}
           </div>
         </div>
         <span class="risk-badge ${item.tier.className}">${item.tier.label} · ${item.hazardScore}</span>
@@ -184,7 +190,7 @@ function renderFlammabilityMap() {
     .map((t) => ({ trial: t, o2: t.initialO2, flow: parseNumeric(t.air) }))
     .filter((d) => d.o2 != null && d.flow != null);
 
-  byId("plotted-count").textContent = `${points.length} of ${trials.length} trials plotted (with numeric O₂ & airflow)`;
+  byId("plotted-count").textContent = `${points.length} of ${trials.length} trials plotted (numeric O₂ & airflow)`;
 
   const W = 760, H = 400;
   const pad = { top: 22, right: 26, bottom: 52, left: 62 };
@@ -196,13 +202,14 @@ function renderFlammabilityMap() {
   const xMin = Math.floor(minFlowRaw);
   const xMax = Math.ceil((maxFlowRaw + 2) / 5) * 5;
 
+  // The axis reaches 32% so the planned lunar habitat atmosphere (≥30% O₂) is visible next to the data.
   const yMin = 12;
-  const yMax = 24;
+  const yMax = 32;
 
   const xScale = (v) => pad.left + ((v - xMin) / Math.max(1, xMax - xMin)) * plotW;
   const yScale = (v) => pad.top + plotH - ((v - yMin) / (yMax - yMin)) * plotH;
 
-  const yTicks = [12, 14, 16, 18, 20, 22, 24];
+  const yTicks = [12, 16, 20, 24, 28, 32];
   const xStep = xMax <= 25 ? 5 : xMax <= 60 ? 10 : 15;
   const xTicks = [];
   for (let v = xMin; v <= xMax; v += xStep) xTicks.push(v);
@@ -221,13 +228,21 @@ function renderFlammabilityMap() {
     markup += `<text class="chart-axis-label" x="${x}" y="${pad.top + plotH + 20}" text-anchor="middle">${xVal}</text>`;
   }
 
+  const tested = points.map((p) => p.o2);
+  const testedTop = tested.length ? Math.max(...tested) : 22.2;
+  const gapTop = yScale(yMax);
+  markup += `<rect class="chart-gap" x="${pad.left}" y="${yScale(30)}" width="${plotW}" height="${yScale(testedTop) - yScale(30)}" />`;
+  markup += `<rect class="chart-lunar" x="${pad.left}" y="${gapTop}" width="${plotW}" height="${yScale(30) - gapTop}" />`;
+  markup += `<text class="chart-lunar-label" x="${pad.left + 12}" y="${gapTop + 20}">PLANNED LUNAR HABITAT · ≥30% O₂ AT ≤10.2 PSI · NO BASS-II DATA</text>`;
+  markup += `<text class="chart-gap-label" x="${pad.left + 12}" y="${(yScale(30) + yScale(testedTop)) / 2 + 4}">UNTESTED ABOVE ${number.format(testedTop)}% O₂</text>`;
+
   for (const ref of [{ val: 21, label: "21% Earth O₂" }, { val: 18, label: "18% Threshold" }]) {
     const y = yScale(ref.val);
     markup += `<line class="chart-ref-line" x1="${pad.left}" y1="${y}" x2="${W - pad.right}" y2="${y}" />`;
     markup += `<text class="chart-axis-label" x="${W - pad.right - 4}" y="${y - 5}" text-anchor="end">${ref.label}</text>`;
   }
 
-  markup += `<text class="chart-axis-title" x="${pad.left + plotW / 2}" y="${H - 10}" text-anchor="middle">Airflow Velocity (cm/s)</text>`;
+  markup += `<text class="chart-axis-title" x="${pad.left + plotW / 2}" y="${H - 10}" text-anchor="middle">Initial airflow reading (cm/s)</text>`;
   markup += `<text class="chart-axis-title" transform="rotate(-90)" x="${-(pad.top + plotH / 2)}" y="18" text-anchor="middle">Initial O₂ (%)</text>`;
 
   const orderedPoints = [...points].sort((a, b) => {
@@ -244,7 +259,10 @@ function renderFlammabilityMap() {
     const isDimmed = activeMapMaterial && trial.family !== activeMapMaterial;
     const r = isDimmed ? 4.2 : 6;
     const opacity = isDimmed ? 0.22 : 0.92;
-    markup += `<circle class="chart-point" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r}" fill="${color}" fill-opacity="${opacity}" tabindex="0" data-point-id="${escape(trial.id)}" aria-label="Trial ${escape(trial.id)}: ${escape(familyLabel)}, ${o2}% O2, ${flow} cm/s" />`;
+    const outcome = outcomeOf(trial);
+    // Filled = sustained flame; ring = brief flame or no ignition; dashed ring = outcome not documented.
+    const fill = outcome === "sustained" ? color : "transparent";
+    markup += `<circle class="chart-point outcome-${outcome}" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r}" fill="${fill}" stroke="${color}" fill-opacity="${opacity}" stroke-opacity="${opacity}" tabindex="0" data-point-id="${escape(trial.id)}" aria-label="Trial ${escape(trial.id)}: ${escape(familyLabel)}, ${o2}% O2, ${flow} cm/s, ${OUTCOME_LABEL[outcome]}" />`;
   }
 
   svg.innerHTML = markup;
@@ -257,6 +275,7 @@ function renderFlammabilityMap() {
       <span>${escape(trial.material)}</span>
       <span>O₂: ${oxygen(trial.initialO2)} · Flow: ${escape(trial.air || "—")}</span>
       <span>Direction: ${escape(formatDirection(trial.report?.direction))}</span>
+      <span>Outcome: ${OUTCOME_LABEL[outcomeOf(trial)]}</span>
     `;
     tooltip.hidden = false;
     const stageRect = byId("chart-stage").getBoundingClientRect();
@@ -491,12 +510,22 @@ function displayAnswer(result) {
     }</article>`).join("");
 }
 
+// The report and guide passages are only needed when the AI service is unavailable.
+let passagesLoaded = false;
+async function loadPassages() {
+  if (passagesLoaded) return;
+  try {
+    const response = await fetch("chunks.json");
+    if (response.ok) { loadIndex({ chunks: await response.json() }); passagesLoaded = true; }
+  } catch { /* keep the trial-only search */ }
+}
+
 async function ask() {
   const question = byId("question").value.trim();
   if (!question || pending || !trials.length) return;
   pending = true;
   byId("ask").disabled = true;
-  byId("answer").textContent = "Searching NASA report…";
+  byId("answer").textContent = "Searching NASA documents…";
   try {
     const response = await fetch("/api/ask", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -505,7 +534,8 @@ async function ask() {
     if (!response.ok) throw new Error("Unavailable");
     displayAnswer(await response.json());
   } catch {
-    displayAnswer(findEvidence(question, trials, "Generative AI is unavailable in this session. Showing matching passages from the NASA report."));
+    await loadPassages();
+    displayAnswer(findEvidence(question, trials, "Generative AI is unavailable in this session. Showing matching passages from the NASA documents."));
   } finally {
     pending = false;
     byId("ask").disabled = false;
