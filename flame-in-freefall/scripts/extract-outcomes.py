@@ -5,10 +5,10 @@ flame. Spread means the flame traveled beyond the ignition region. Extinction
 describes the observed event or test condition, rather than a physical model.
 A null value means the observation does not establish that outcome.
 """
+
 import argparse
 import json
 from pathlib import Path
-
 
 # Membership is based on the observation text. Gas readings, fan settings
 # alone and attempts to ignite or blow out a flame do not prove an outcome.
@@ -79,7 +79,9 @@ def main():
         description="Read trials.json and emit trials enriched with BASS-II outcomes."
     )
     parser.add_argument(
-        "trials", type=Path, nargs="?",
+        "trials",
+        type=Path,
+        nargs="?",
         default=Path(__file__).resolve().parents[1] / "dist" / "trials.json",
     )
     args = parser.parse_args()
