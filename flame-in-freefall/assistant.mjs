@@ -115,6 +115,8 @@ export async function answerQuestion(question, trials, env, request = fetch) {
       body: JSON.stringify({
         model: env.OPENAI_MODEL || "gpt-4.1-mini",
         store: false,
+        // Low randomness: answers must stay close to the cited passages.
+        temperature: 0.2,
         max_output_tokens: 800,
         instructions: [
           "Eres un analista de seguridad contra incendios en naves espaciales que trabaja con dos documentos de NASA: el informe NASA/TM-20210011385 (resultados de BASS-II, 2021) y la guía NP-2015-10-034-JSC 'A Researcher's Guide to: Combustion Science' (2015). Responde de forma breve en el idioma de la pregunta.",
