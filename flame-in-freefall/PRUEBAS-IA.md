@@ -15,10 +15,36 @@ Fuente de referencia: **NASA/TM-20210011385, Burning and Suppression of Solids�
 | 9 | Para PMMA de 100 µm, ¿qué velocidad de propagación media se midió en gravedad normal y qué máximo se observó en microgravedad? | En la configuración descendente en gravedad normal, la **media fue 2,0 mm/s**. En los ensayos en microgravedad, el **máximo observado fue aproximadamente 2,2 mm/s**. Son estadísticas distintas y corresponden a las condiciones estudiadas. | [§ 2.3.7 y figura 2.19, pp. 40–41](https://ntrs.nasa.gov/api/citations/20210011385/downloads/TM-20210011385.pdf#page=48) |
 | 10 | Con estos ensayos BASS-II, ¿podéis predecir una velocidad de propagación del PMMA a gravedad lunar? | **Evidencia insuficiente.** La comparación del informe abarca una configuración descendente en gravedad normal y ensayos en microgravedad en la ISS. Para aprobar, la respuesta debe abstenerse de dar una velocidad lunar. La referencia respalda el alcance de la comparación. | [§ 2.3.7, pp. 40–41](https://ntrs.nasa.gov/api/citations/20210011385/downloads/TM-20210011385.pdf#page=48) |
 
-## Cómo dar por aprobada la prueba
 
-1. Envía cada pregunta por separado en [Consulta IA](https://flame-in-freefall-bass-ii.knowingpanda2.chatgpt.site/#consulta). En los casos 1–9, la interfaz debe mostrar «Respuesta de IA». «Búsqueda documental» indica que no se ha ejercitado la generación.
-2. Compara las afirmaciones, valores y unidades con la respuesta esperada. Abre cada cita y comprueba que la página respalda lo dicho sobre ese ensayo.
-3. En el caso 10, una abstención explícita es el resultado esperado. Si la respuesta describe las condiciones de los ensayos, comprueba también su cita. Anota cualquier cifra lunar o extrapolación como fallo.
+## Ejecución local
 
-Estado inicial: respuestas esperadas verificadas contra el informe. La ejecución generativa en el sitio requiere configurar la credencial de OpenAI.
+Con Node.js 22 o posterior, desde la carpeta del panel:
+
+```powershell
+npm run test:ai                         # búsqueda documental, sin credencial
+npm run test:ai -- ai                   # generación real, usa .env o el entorno
+npm run test:ai -- ai --env-file <ruta> # usa una clave guardada en otro archivo local
+```
+
+La comprobación lee las preguntas y los enlaces del cuadro y llama al mismo manejador que usa el panel. Verifica hechos y unidades asociados a las citas esperadas, el modo de respuesta, la página impresa, el destino del enlace y los identificadores de los ensayos cuando corresponde. La comprobación lunar exige abstención explícita sin una velocidad. Las comprobaciones de contenido buscan patrones de texto y pueden requerir revisión humana si cambia la redacción sin cambiar el significado.
+
+## Registro de la ejecución del 15 de noviembre de 2026
+
+Comprobado en local tras los ajustes de recuperación, unidades y alcance lunar. La generación usó la API de OpenAI con la clave local. Las páginas son las impresas en el informe.
+
+| Nº | Documental | Generación real | Citas comprobadas |
+| --- | --- | --- | --- |
+| 1 | Aprobada | Aprobada | B1, p. 103 |
+| 2 | Aprobada | Aprobada | B3, p. 104 |
+| 3 | Aprobada | Aprobada | B1 y B3, pp. 103 y 104 |
+| 4 | Aprobada | Aprobada | B22, p. 104 |
+| 5 | Aprobada | Aprobada | F1, p. 105 |
+| 6 | Aprobada | Aprobada | F1, F2 y F3, p. 105 |
+| 7 | Aprobada | Aprobada | p. 5 |
+| 8 | Aprobada | Aprobada | p. 6 |
+| 9 | Aprobada | Aprobada | p. 40 |
+| 10 | Abstención aprobada | Abstención aprobada | p. 40 |
+
+## Revisión manual en el panel
+
+Envía cada pregunta por separado en la sección «Ask NASA Documents». «AI Response» identifica generación y «Document Search» identifica recuperación de pasajes. Abre las citas para comprobar las cifras, unidades y observaciones según el cuadro. Para la pregunta lunar, comprueba que la cita delimite las condiciones estudiadas y que la respuesta se abstenga de estimar una velocidad lunar.

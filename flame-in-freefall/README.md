@@ -1,6 +1,6 @@
 # Flame in Freefall
 
-Panel para explorar los ensayos de BASS-II en la Estación Espacial Internacional. Incluye un mapa de inflamabilidad, filtros, comparación de hasta tres ensayos, resultados y grabaciones vinculadas a las fichas.
+Panel para explorar los ensayos de BASS-II en la Estación Espacial Internacional. Incluye un mapa de inflamabilidad, filtros, comparación de hasta tres ensayos, resultados, descargas CSV y grabaciones vinculadas a las fichas.
 
 ## Abrir en local
 
@@ -30,7 +30,13 @@ python scripts/build-index.py           # solo pasajes
 python scripts/build-index.py --embed   # pasajes y vectores (usa OPENAI_API_KEY del entorno o de .env)
 ```
 
-La respuesta de IA se genera a partir de los pasajes recuperados e incluye una interpretación para seguridad contra incendios, marcada como tal y limitada al rango ensayado. Cada afirmación devuelve los identificadores de las fuentes utilizadas y el servidor los convierte en enlaces al PDF. Si el servicio de IA falta o falla, la interfaz indica que está mostrando resultados de búsqueda documental.
+La respuesta de IA se genera a partir de los pasajes recuperados e puede incluir una interpretación para seguridad contra incendios cuando se pregunta por ella y los pasajes la respaldan dentro de las condiciones ensayadas. Cada afirmación devuelve los identificadores de las fuentes utilizadas y el servidor los convierte en enlaces al PDF. Si el servicio de IA falta o falla, la interfaz indica que está mostrando resultados de búsqueda documental.
+
+Las [diez pruebas ejecutables y sus resultados](PRUEBAS-IA.md) cubren ambos modos y verifican la abstención para gravedad lunar.
+
+## Datos y exportación
+
+La [tabla de campos y decisiones](DATOS-BASS-II.md) explica las unidades, el significado de los valores originales y el tratamiento de datos ausentes o ambiguos. El comparador marca condiciones distintas y permite descargar la selección. La tabla de ensayos exporta todos los resultados de los filtros, aunque ocupen varias páginas.
 
 ## Fuentes
 
