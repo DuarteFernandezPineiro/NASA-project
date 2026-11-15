@@ -6,9 +6,19 @@ export const documents = {
 };
 export const reportLink = (source) => `${documents[source.doc]?.url || REPORT}#page=${source.pdfPage}`;
 
+export const isMissing = (value) => value == null || /^(?:none|n\/?a|-*|—)$/i.test(String(value).trim());
+
+export function airReading(raw) {
+  if (isMissing(raw)) return { value: null, status: "Missing" };
+  const match = String(raw).trim().match(/^((?:\d+(?:\.\d+)?|\.\d+))(?:\s*cm\/s)?$/i);
+  return match
+    ? { value: Number(match[1]), status: "Single reading" }
+    : { value: null, status: "Multiple / annotated" };
+}
+
 const featuredNotes = {
   B1: "La muestra prendió rápidamente. Se cortó el flujo cuando la llama había recorrido aproximadamente la mitad de la muestra y se extinguió enseguida. El informe describe hollín y un frente de llama azul.",
-  B3: "El informe anota que, con menor flujo, la llama era más azul en conjunto y seguía produciendo algo de hollín. También señala incertidumbre sobre la lectura inicial de oxígeno.",
+  B3: "El informe anota que, con menor flujo, la llama era más azul en conjunto y seguía produciendo algo de hollín. La nota estima que el O₂ inicial probablemente era 20,6 %.",
   F1: "El Nomex prendió brevemente, la llama no se propagó y se extinguió mientras el ignitor seguía encendido.",
 };
 
@@ -316,22 +326,48 @@ function excerpt(text, question, size = 2) {
   return scored.map(({ index }) => sentences[index]).join(" … ");
 }
 
+function trialExcerpt(source, airOrDirection, asksOxygen) {
+  const { direction, airDisplay, initialO2CalibratedPercentByVolume: calibrated,
+    initialO2UncalibratedPercentByVolume: uncalibrated } = source.setup;
+  const context = [];
+  if (airOrDirection) {
+    if (direction) context.push(`Flujo: ${direction}.`);
+    if (airDisplay) {
+      const air = airReading(airDisplay);
+      context.push(`Air display: ${air.value === null ? airDisplay + " (registro original)" : air.value + " cm/s"}.`);
+    }
+  }
+  if (asksOxygen && calibrated != null) context.push(`O₂ inicial calibrado: ${String(calibrated).replace(".", ",")} %.`);
+  if (asksOxygen && uncalibrated != null) context.push(`O₂ inicial sin calibrar: ${String(uncalibrated).replace(".", ",")} %.`);
+  return [`${source.id} · ${featuredNotes[source.id] || source.text}`, ...context].join(" ");
+}
+
+export const asksLunarSpread = (question) => {
+  const normalized = normalize(question);
+  return /\b(?:luna|lunar|moon)\b/.test(normalized) && /\bpmma\b/.test(normalized)
+    && /propag|spread/.test(normalized);
+};
+
 export function findEvidence(question, trials, note = "") {
-  const records = rankEvidence(question, trials, 4);
-  if (/\b(luna|lunar|moon)\b/.test(normalize(question)) && records[0]?.id === "gravity") {
+  const named = namedTrialEvidence(question, trials);
+  const records = named.length ? named.slice(0, 4).map(publicSource) : rankEvidence(question, trials, 4);
+  if (asksLunarSpread(question) && records[0]?.id === "gravity") {
     return { mode: "search", note, claims: [{
-      text: "Los ensayos citados comparan gravedad normal con microgravedad en la ISS. La evidencia disponible no permite calcular una velocidad de propagación en gravedad lunar.",
+      text: "Los ensayos citados comparan la propagación descendente en gravedad normal con microgravedad en la ISS. La evidencia disponible no permite calcular una velocidad de propagación en gravedad lunar.",
       sources: [records[0]],
     }] };
   }
+  const airOrDirection = /aire|flujo|air|flow|direccion/.test(normalize(question));
+  const asksOxygen = /\bo2\b|oxigen|oxygen/.test(normalize(question));
+  const completePassages = new Set(methods.map((source) => source.id));
   return {
     mode: "search",
     note,
     claims: records.length
       ? records.map((source) => ({
         text: source.setup
-          ? `${source.id} · ${featuredNotes[source.id] || source.text}`
-          : `${source.title ? `${source.title}: ` : ""}${excerpt(source.text, question)}`,
+          ? trialExcerpt(source, airOrDirection, asksOxygen)
+          : `${source.title ? `${source.title}: ` : ""}${completePassages.has(source.id) ? source.text : excerpt(source.text, question)}`,
         sources: [source],
       }))
       : [{ text: "No hay pasajes vinculados que respondan a esa pregunta. Prueba con un identificador de ensayo como B1, B3 o F1.", sources: [] }],

@@ -2,23 +2,23 @@
 
 **NASA Space Apps Challenge 2026 · [Flame in Freefall: SI-Powered Fire Safety Insights from Microgravity Combustion Data](https://www.spaceappschallenge.org/2026/challenges/flame-in-freefall/)**
 
-An interactive dashboard that summarizes, ranks and interprets the 129 trials of NASA's **Burning and Suppression of Solids–II (BASS-II)** experiment on the International Space Station, and answers questions about them with citations to the original NASA pages.
+An interactive dashboard that explores and summarizes the 129 trials of NASA's **Burning and Suppression of Solids–II (BASS-II)** experiment on the International Space Station, and answers questions about them with citations to the original NASA pages.
 
 ## What it does
 
-- **Exploration Fire Safety Advisor (Moon & Mars).** Interactive exploration environment selector translating BASS-II microgravity findings into operational flight rules across four gravity and atmospheric regimes: ISS/LEO transit (0g, 21% O₂), Artemis Lunar Gateway and Base Camp (1/6g, 34% O₂ Exploration Atmosphere), Mars Surface Habitat (3/8g, 28% O₂), and Exploration EVA spacesuits (100% O₂).
-- **Flammability map & physical regimes.** Every trial plotted by initial O₂ against airflow, coloured by material and marked by outcome. An interactive physical overlay delineates the radiation quenching limit (<1.5 cm/s), the critical spacecraft cabin ventilation draft (2–8 cm/s), convective blow-off (>28 cm/s), and the planned lunar exploration atmosphere (≥30% O₂).
-- **Hazard ranking.** Materials ordered by documented outcomes: the lowest O₂ at which a flame was sustained, the share of trials that burned, and the O₂ consumed. Properly distinguishes PMMA cylindrical rods from thin films and thick slabs.
-- **Trial explorer & SI comparative synthesis.** Filters, side-by-side comparison of up to three trials with automated Super Intelligence (SI) cross-analysis and actionable mission flight rules, plus original ISS video recordings.
-- **Decades of NASA microgravity combustion.** An interactive continuum tracing six decades of microgravity fire research: 1960s drop towers, 1990s Space Shuttle Spacelab & SOFBALL, 2008–2020 ISS CIR/BASS-II, 2016–2024 Project Saffire, and 2024+ Artemis SoFIE.
+- **Trial map.** Initial calibrated O₂ and single airflow readings, with markers for ignition yes, no or unknown. An optional overlay shows the uncertainty ranges for the thin-PMMA experiments in NASA Table 2.1. The map reports excluded records; the explorer retains the original airflow entries.
+- **Documented outcomes.** Ignition and spread counts and percentages, overall and by material family, using all trials in each denominator.
+- **Trial explorer.** Filters, comparison of up to three trials with differences and missing fields marked, CSV downloads and original ISS recordings.
+- **Exploration Advisor.** A comparison of four environments with links to NASA references and the limits of the BASS-II evidence.
+- **Decades of NASA microgravity combustion.** An interactive timeline from drop towers to SoFIE.
 - **Ask NASA documents.** A retrieval-augmented assistant over the BASS-II summary report and NASA's ISS combustion guide. Every claim links to the PDF page that supports it; answers flag when a question goes beyond the tested range.
 
 ## Key findings
 
-1. **Microgravity extends flammability.** PMMA rods kept burning down to 13.5% O₂ in very weak airflow, below the 15.4% limit of the normal-gravity upward test used to screen spacecraft materials (TM-20210011385, §6.1.4, p. 76).
-2. **Starving the flame works.** Thin PMMA stops spreading below a critical opposed-flow velocity that does not depend on film thickness and rises as O₂ falls (§2.2.8, p. 28).
-3. **Small fires, toxic smoke.** Most tests released well below 100 W, but CO/CO₂ ratios were an order of magnitude higher than in efficient flue gases (§1.6, p. 11).
-4. **The lunar gap.** A Moon base is expected to run at ≥30% O₂ and ≤10.2 psi; BASS-II covers 13.6–22.2% O₂ at ISS pressure.
+1. **PMMA rods.** NASA reported 13.5% O₂ at the low-flow microgravity flammability boundary for the rods studied and 15.4% for upward spread in a normal-gravity test with additional forced flow (§6.1.4, p. 76).
+2. **Thin PMMA in opposed flow.** In this film series, NASA measured low-flow extinction velocities of 10 ± 5 mm/s at 21% O₂ and 30 ± 5 mm/s at 16% O₂ (Table 2.1, p. 28).
+3. **Combustion products.** NASA estimated heat release below 100 W for most trials and reported CO/CO₂ ratios about ten times those of efficient flue gases (§1.6, p. 11).
+4. **Lunar gravity.** The comparison of PMMA flame spread covers downward spread in normal gravity and experiments in ISS microgravity (§2.3.7, p. 40).
 
 ## NASA data
 
@@ -35,7 +35,7 @@ An interactive dashboard that summarizes, ranks and interprets the 129 trials of
 3. The model (`gpt-4.1-mini`) must cite source IDs for every claim; the server rejects any answer citing a source it was not given and falls back to showing the passages.
 4. Guardrails: passages are scoped to the investigator's own trial series, setup descriptions cannot support safety claims, fan potentiometer settings are never reported as velocities, and anything outside 13.6–22.2% O₂ is flagged as untested.
 
-Acceptance questions with expected answers and page references are in [`flame-in-freefall/PRUEBAS-IA.md`](flame-in-freefall/PRUEBAS-IA.md).
+Run the ten acceptance checks locally with `npm run test:ai` for document search or `npm run test:ai -- ai` for generation. Expected answers, source pages and recorded results are in [`flame-in-freefall/PRUEBAS-IA.md`](flame-in-freefall/PRUEBAS-IA.md).
 
 ## Run locally
 
@@ -53,8 +53,8 @@ Without a key, the assistant still returns the matching NASA passages.
 
 - Only BASS-II trial data; other investigations appear only as context from the 2015 guide.
 - Ignition outcome is documented for 116 of 129 trials; flame spread is stated explicitly in only 28.
-- The hazard ranking is a team heuristic, not a NASA flammability rating, and materials were tested under different conditions.
-- No trial reaches lunar habitat O₂ levels or partial gravity.
+- Outcome proportions describe samples tested across different geometries and conditions. See the [field and decision table](flame-in-freefall/DATOS-BASS-II.md).
+- The ISS trials cover microgravity. The PMMA comparison with normal gravity provides no lunar measurements.
 
 ## Use of AI
 
