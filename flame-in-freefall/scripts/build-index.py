@@ -11,6 +11,7 @@ writes dist/vectors.json (int8-quantised, base64) for semantic retrieval.
     python scripts/build-index.py            # passages only
     python scripts/build-index.py --embed    # passages + vectors (needs OPENAI_API_KEY)
 """
+
 import argparse
 import base64
 import json
@@ -23,14 +24,21 @@ import pdfplumber
 
 PROJECT = Path(__file__).resolve().parents[1]
 PDF = PROJECT.parent / "TM-20210011385.pdf"
-GUIDE_PDF = PROJECT.parent / "np-2015-10-034-jsc_combustion_in_reduced_gravity-iss-mini-book-011116-508.pdf"
-GUIDE_CONTENTS = (6, 7)        # PDF pages of the table of contents
-GUIDE_BODY = range(8, 49)      # "Why Conduct Combustion Research..." up to the funding and citation pages
+GUIDE_PDF = (
+    PROJECT.parent
+    / "np-2015-10-034-jsc_combustion_in_reduced_gravity-iss-mini-book-011116-508.pdf"
+)
+GUIDE_CONTENTS = (6, 7)  # PDF pages of the table of contents
+GUIDE_BODY = range(
+    8, 49
+)  # "Why Conduct Combustion Research..." up to the funding and citation pages
 DIST = PROJECT / "dist"
 
-FIRST_BODY_PAGE = 9            # PDF page of printed page 1
-TABLE_PAGES = range(111, 122)  # Appendix A matrices: rotated tables, already in trials.json
-LAST_BODY_PAGE = 136           # Appendix E onwards is a list of publications
+FIRST_BODY_PAGE = 9  # PDF page of printed page 1
+TABLE_PAGES = range(
+    111, 122
+)  # Appendix A matrices: rotated tables, already in trials.json
+LAST_BODY_PAGE = 136  # Appendix E onwards is a list of publications
 TARGET_WORDS = 170
 MAX_WORDS = 230
 EMBED_MODEL = "text-embedding-3-small"
@@ -39,10 +47,14 @@ EMBED_DIMS = 256
 HEADING = re.compile(r"^(\d\.\d(?:\.\d+)?|[A-D]\.\d)\s+([A-Z][^=]*[^.,;=])$")
 APPENDIX = re.compile(r"^Appendix ([A-E])\.\s*[—-]\s*(.+)$")
 FOOTER = re.compile(r"^NASA/TM-20210011385\s+\d+$")
-SKIPPED = re.compile(r"references|acknowledg|publications resulting|research citations|symbols", re.I)
+SKIPPED = re.compile(
+    r"references|acknowledg|publications resulting|research citations|symbols", re.I
+)
 PLAIN_HEADINGS = {"Summary", "Symbols", "Acronyms", "References", "Nomenclature"}
-CITATION = re.compile(r"et al\.:|[Pp]resented at|\bpp\. \d|https?://|^\d{1,2}\. [A-Z][\w’'-]+, [A-Z]"
-                      r"|[A-Z][\w’'-]+, [A-Z][\w.]*(?: [A-Z]\.)?;? and [A-Z][\w’'-]+, [A-Z][\w. ]*:|^[A-Z][\w’'-]+, [A-Z][\w.]*:")
+CITATION = re.compile(
+    r"et al\.:|[Pp]resented at|\bpp\. \d|https?://|^\d{1,2}\. [A-Z][\w’'-]+, [A-Z]"
+    r"|[A-Z][\w’'-]+, [A-Z][\w.]*(?: [A-Z]\.)?;? and [A-Z][\w’'-]+, [A-Z][\w. ]*:|^[A-Z][\w’'-]+, [A-Z][\w.]*:"
+)
 SUBSCRIPT_LINE = re.compile(r"^(?:[\dxgs∞fF]{1,3}\s*){1,12}$")
 
 
@@ -57,7 +69,11 @@ def clean_lines(text):
 def fix_chemistry(text):
     text = re.sub(r"\bO (?=[a-z(,.;)]|[A-Z][a-z])", "O2 ", text)
     text = re.sub(r"\bN (?=flow|dilution|concentration|[,.;)])", "N2 ", text)
-    text = re.sub(r"\bCO (?=,? and CO\b|sensor in the CDM|scrubb|monitor|levels? (?:rose|increas))", "CO2 ", text)
+    text = re.sub(
+        r"\bCO (?=,? and CO\b|sensor in the CDM|scrubb|monitor|levels? (?:rose|increas))",
+        "CO2 ",
+        text,
+    )
     text = re.sub(r"\bCO to CO ratio", "CO to CO2 ratio", text)
     text = re.sub(r"\s+([,.;)])", r"\1", text)
     return re.sub(r"\s{2,}", " ", text).strip()
@@ -68,7 +84,11 @@ def read_sections():
     number, title, skip = "0", "Front matter", True
     with pdfplumber.open(PDF) as doc:
         for index, page in enumerate(doc.pages, 1):
-            if index < FIRST_BODY_PAGE or index > LAST_BODY_PAGE or index in TABLE_PAGES:
+            if (
+                index < FIRST_BODY_PAGE
+                or index > LAST_BODY_PAGE
+                or index in TABLE_PAGES
+            ):
                 continue
             buffer = []
             for line in clean_lines(page.extract_text() or ""):
@@ -107,14 +127,16 @@ def flush(lines, number, title, page, skip):
         if len(words) < 4 or CITATION.search(sentence):
             continue
         for start in range(0, len(words), MAX_WORDS):
-            yield number, title, page, " ".join(words[start:start + MAX_WORDS])
+            yield number, title, page, " ".join(words[start : start + MAX_WORDS])
 
 
 def read_guide():
     """Yield (section, title, pdf_page, sentence) for the Researcher's Guide."""
     with pdfplumber.open(GUIDE_PDF) as doc:
-        pages = {index: (doc.pages[index - 1].dedupe_chars().extract_text() or "")
-                 for index in [*GUIDE_CONTENTS, *GUIDE_BODY]}
+        pages = {
+            index: (doc.pages[index - 1].dedupe_chars().extract_text() or "")
+            for index in [*GUIDE_CONTENTS, *GUIDE_BODY]
+        }
     headings = set()
     for index in GUIDE_CONTENTS:
         for line in pages[index].split("\n"):
@@ -144,9 +166,16 @@ def build_chunks(sentences, doc, page_offset, label):
         nonlocal current, words
         if current and words >= 25:
             number, title, page = key[0], key[1], current[0][0]
-            chunks.append({"doc": doc, "section": number, "title": title, "pdfPage": page,
-                           "page": page - page_offset,
-                           "text": " ".join(sentence for _, sentence in current)})
+            chunks.append(
+                {
+                    "doc": doc,
+                    "section": number,
+                    "title": title,
+                    "pdfPage": page,
+                    "page": page - page_offset,
+                    "text": " ".join(sentence for _, sentence in current),
+                }
+            )
         current, words = [], 0
 
     for number, title, page, sentence in sentences:
@@ -167,13 +196,27 @@ def build_chunks(sentences, doc, page_offset, label):
         base = label(chunk)
         seen[base] = seen.get(base, 0) + 1
         chunk["id"] = base if seen[base] == 1 else f"{base}{chr(96 + seen[base])}"
-    return [{"id": c["id"], "doc": c["doc"], "section": c["section"], "title": c["title"],
-             "pdfPage": c["pdfPage"], "page": c["page"], "text": c["text"]} for c in chunks]
+    return [
+        {
+            "id": c["id"],
+            "doc": c["doc"],
+            "section": c["section"],
+            "title": c["title"],
+            "pdfPage": c["pdfPage"],
+            "page": c["page"],
+            "text": c["text"],
+        }
+        for c in chunks
+    ]
 
 
 def build_all():
-    report = build_chunks(read_sections(), "report", FIRST_BODY_PAGE - 1,
-                          lambda c: f"{c['section']}·p{c['page']}")
+    report = build_chunks(
+        read_sections(),
+        "report",
+        FIRST_BODY_PAGE - 1,
+        lambda c: f"{c['section']}·p{c['page']}",
+    )
     guide = build_chunks(read_guide(), "guide", 0, lambda c: f"Guide·p{c['page']}")
     return report + guide
 
@@ -183,19 +226,31 @@ def embed(texts, key):
     for start in range(0, len(texts), 64):
         request = urllib.request.Request(
             "https://api.openai.com/v1/embeddings",
-            data=json.dumps({"model": EMBED_MODEL, "dimensions": EMBED_DIMS,
-                             "input": texts[start:start + 64]}).encode(),
-            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+            data=json.dumps(
+                {
+                    "model": EMBED_MODEL,
+                    "dimensions": EMBED_DIMS,
+                    "input": texts[start : start + 64],
+                }
+            ).encode(),
+            headers={
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json",
+            },
         )
         with urllib.request.urlopen(request, timeout=60) as response:
             data = json.load(response)["data"]
-        vectors += [item["embedding"] for item in sorted(data, key=lambda item: item["index"])]
+        vectors += [
+            item["embedding"] for item in sorted(data, key=lambda item: item["index"])
+        ]
         print(f"  embedded {len(vectors)}/{len(texts)}")
     return vectors
 
 
 def quantise(vector):
-    return base64.b64encode(bytes((max(-127, min(127, round(v * 127))) & 0xFF) for v in vector)).decode()
+    return base64.b64encode(
+        bytes((max(-127, min(127, round(v * 127))) & 0xFF) for v in vector)
+    ).decode()
 
 
 def load_key():
@@ -210,13 +265,19 @@ def load_key():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--embed", action="store_true", help="also write dist/vectors.json")
+    parser.add_argument(
+        "--embed", action="store_true", help="also write dist/vectors.json"
+    )
     args = parser.parse_args()
 
     chunks = build_all()
-    (DIST / "chunks.json").write_text(json.dumps(chunks, ensure_ascii=False, indent=0) + "\n", encoding="utf-8")
+    (DIST / "chunks.json").write_text(
+        json.dumps(chunks, ensure_ascii=False, indent=0) + "\n", encoding="utf-8"
+    )
     counts = {doc: sum(c["doc"] == doc for c in chunks) for doc in ("report", "guide")}
-    print(f"{len(chunks)} passages -> dist/chunks.json ({counts['report']} report, {counts['guide']} guide)")
+    print(
+        f"{len(chunks)} passages -> dist/chunks.json ({counts['report']} report, {counts['guide']} guide)"
+    )
 
     if args.embed:
         key = load_key()
@@ -224,12 +285,24 @@ def main():
             raise SystemExit("OPENAI_API_KEY is missing (environment or .env)")
         trials = json.loads((DIST / "trials.json").read_text(encoding="utf-8"))
         items = [(c["id"], f"{c['title']}. {c['text']}") for c in chunks]
-        items += [(t["id"], f"Test {t['id']}, {t['material']}, {t['report'].get('layoutRaw') or ''} flow, "
-                            f"{t['initialO2']}% O2. {t['report']['observation']}")
-                  for t in trials if (t.get("report") or {}).get("observation")]
+        items += [
+            (
+                t["id"],
+                f"Test {t['id']}, {t['material']}, {t['report'].get('layoutRaw') or ''} flow, "
+                f"{t['initialO2']}% O2. {t['report']['observation']}",
+            )
+            for t in trials
+            if (t.get("report") or {}).get("observation")
+        ]
         vectors = embed([text for _, text in items], key)
-        payload = {"model": EMBED_MODEL, "dims": EMBED_DIMS,
-                   "vectors": {item_id: quantise(vector) for (item_id, _), vector in zip(items, vectors)}}
+        payload = {
+            "model": EMBED_MODEL,
+            "dims": EMBED_DIMS,
+            "vectors": {
+                item_id: quantise(vector)
+                for (item_id, _), vector in zip(items, vectors)
+            },
+        }
         (DIST / "vectors.json").write_text(json.dumps(payload) + "\n", encoding="utf-8")
         print(f"{len(vectors)} vectors -> dist/vectors.json")
 
