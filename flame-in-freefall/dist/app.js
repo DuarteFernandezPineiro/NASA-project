@@ -24,10 +24,13 @@ let page = 1;
 let sort = 0;
 let requester;
 let pending = false;
+let showExtinctionReference = false;
 
 function formatFamily(raw) {
   const map = {
+    "Varilla PMMA": "PMMA (Cylindrical rods)",
     "Varilla sin polímero explícito": "Polymer rod (unspecified)",
+    "PMMA": "PMMA (Films & slabs)",
     "Otros": "Other materials",
     "Cera": "Wax"
   };
@@ -142,6 +145,18 @@ function renderFlammabilityMap() {
 
   markup += `<text class="chart-axis-title" x="${pad.left + plotW / 2}" y="${H - 10}" text-anchor="middle">Air display · single reading (cm/s)</text>`;
   markup += `<text class="chart-axis-title" transform="rotate(-90)" x="${-(pad.top + plotH / 2)}" y="18" text-anchor="middle">Initial calibrated O₂ (%)</text>`;
+
+  if (showExtinctionReference) {
+    // NASA/TM-20210011385, Table 2.1. Convert the reported mm/s to cm/s.
+    for (const [o2, flow, uncertainty] of [[21, 1, 0.5], [16, 3, 0.5]]) {
+      const y = yScale(o2);
+      const start = xScale(flow - uncertainty);
+      const center = xScale(flow);
+      const end = xScale(flow + uncertainty);
+      markup += `<path class="chart-extinction-reference"
+        d="M ${start} ${y} H ${end} M ${start} ${y-5} v 10 M ${end} ${y-5} v 10 M ${center} ${y-8} v 16" />`;
+    }
+  }
 
   for (const { trial, o2, flow } of points) {
     const color = materialColors.get(trial.family);
@@ -405,7 +420,12 @@ function compare(trigger) {
   const records = comparisonRecords();
   const rows = (fields, condition) => fields.map(([label, getter]) =>
     comparisonRow(label, getter, records, condition)).join("");
+  const summary = ["Yes", "No", "Unknown"].map((status) => {
+    const count = records.filter((trial) => outcomeStatus(trial.spread) === status).length;
+    return `${status} ${count}/${records.length}`;
+  }).join(" · ");
   showModal("Compare Trials", `
+    <div class="comparison-summary"><strong>Recorded flame spread</strong><p>${summary}</p></div>
     <p class="modal-note">Differences mark distinct recorded conditions. Air entries preserve sequences, settings and notes.</p>
     <div class="table-scroll" role="region" aria-label="Trial comparison" tabindex="0">
       <table class="compare-table">
@@ -487,6 +507,187 @@ async function ask() {
 }
 
 /* ==========================================================================
+   EXPLORATION ADVISOR (MOON, MARS & EVA) & DECADES OF NASA COMBUSTION
+   ========================================================================== */
+
+const EXPLORATION_ENVIRONMENTS = {
+  iss: {
+    name: "ISS & LEO Transit",
+    badge: "Microgravity",
+    pressure: "101.3 kPa · 14.7 psia (nominal ISS)",
+    oxygen: "21% O₂ (nominal ISS)",
+    scope: "BASS-II tested small samples under controlled airflow in the ISS Microgravity Science Glovebox, with initial oxygen varied between trials.",
+    evidence: "In B1, a 100 µm PMMA film flame extinguished quickly after airflow was cut when it had spread about halfway along the sample.",
+    url: reportLink({ pdfPage: 111 }),
+    source: "NASA BASS-II, Table A.1, p. 103",
+  },
+  lunar: {
+    name: "Lunar Habitat",
+    badge: "Partial gravity · about 1/6g",
+    pressure: "56.5 kPa · 8.2 psia (reference)",
+    oxygen: "34% O₂ (reference)",
+    scope: "NASA studied this reference atmosphere for exploration habitat and EVA planning. BASS-II measured combustion in ISS microgravity.",
+    evidence: "The BASS-II PMMA comparison used the ISS and a downward terrestrial configuration. Lunar flame spread remains outside that comparison.",
+    url: reportLink({ pdfPage: 48 }),
+    source: "NASA BASS-II, §2.3.7, p. 40",
+    atmosphereUrl: "https://ntrs.nasa.gov/citations/20240003211",
+  },
+  mars: {
+    name: "Mars Surface Habitat",
+    badge: "Partial gravity · about 0.38g",
+    pressure: "Depends on habitat design",
+    oxygen: "Depends on habitat design",
+    scope: "Mars surface gravity differs from the conditions of the ISS experiments. Habitat pressure and oxygen depend on the vehicle design.",
+    evidence: "The BASS-II dataset leaves flame spread at martian gravity and fire behavior in a Mars habitat unresolved.",
+    url: "https://science.nasa.gov/biological-physical/investigations/sofie/",
+    source: "NASA SoFIE research objectives",
+  },
+  eva: {
+    name: "Exploration EVA Suit",
+    badge: "Suit atmosphere",
+    pressure: "29.6 kPa · 4.3 psia (reference)",
+    oxygen: "Depends on suit design",
+    scope: "NASA used 4.3 psia as a reference suit pressure in exploration prebreathe research.",
+    evidence: "BASS-II measured small samples in the ISS glovebox. Suit-loop airflow, pressure and oxygen require separate evidence.",
+    url: "https://ntrs.nasa.gov/citations/20220009546",
+    source: "NASA exploration prebreathe study",
+  },
+};
+
+const NASA_DECADAL_ERAS = [
+  {
+    id: "drop",
+    source: "https://www.nasa.gov/centers-and-facilities/glenn/zero-gravity-research-facility/",
+    decade: "1960s–1980s",
+    title: "The Drop Tower Era",
+    facility: "NASA Glenn 2.2s & 5.18s Facilities",
+    icon: "⏱",
+    discovery: "Short-duration microgravity experiments on the ground.",
+    narrative: "NASA Glenn’s vacuum drop tower provides 5.18 seconds of near weightlessness for research, including combustion studies.",
+    legacy: "Laid the theoretical foundation for microgravity diffusion flames and zero-g droplet combustion."
+  },
+  {
+    id: "shuttle",
+    source: "https://ntrs.nasa.gov/citations/19990019803",
+    decade: "1990s",
+    title: "Space Shuttle & Spacelab Missions",
+    facility: "STS-83 and STS-94",
+    icon: "🚀",
+    discovery: "SOFBALL studied spherical flames in lean gas mixtures.",
+    narrative: "Spacelab missions carried combustion chambers in the Shuttle cargo bay. SOFBALL used the Shuttle to observe low-power spherical flames in microgravity.",
+    legacy: "Proved that lean flammability limits extend significantly in low gravity."
+  },
+  {
+    id: "iss",
+    source: "https://www.nasa.gov/missions/station/studying-combustion-and-fire-safety/",
+    decade: "2008–2020",
+    title: "The ISS Combustion Era (BASS & BASS-II)",
+    facility: "Combustion Integrated Rack (CIR) & MSG",
+    icon: "🛰",
+    discovery: "Cool flames discovery (FLEX) and solid flammability atlas (BASS-II: 129 trials).",
+    narrative: "FLEX observed cool burning in liquid fuel droplets after the visible flame went out. BASS-II studied small solid samples in the Microgravity Science Glovebox. The PSI table used here contains 129 records.",
+    legacy: "Produced the core experimental dataset powering this dashboard and modern spacecraft safety standards."
+  },
+  {
+    id: "saffire",
+    source: "https://www.nasa.gov/centers-and-facilities/glenn/flame-burns-out-on-nasas-long-running-spacecraft-fire-experiment/",
+    decade: "2016–2024",
+    title: "Project Saffire (Large-Scale Fires)",
+    facility: "Cygnus Automated Cargo Spacecraft",
+    icon: "🔥",
+    discovery: "Saffire studied larger fires aboard uncrewed Cygnus cargo spacecraft.",
+    narrative: "After Cygnus vehicles departed the ISS and before atmospheric re-entry, ground controllers ignited large fabric and PMMA arrays (Saffire I through VI). The series measured flame spread and combustion products in the spacecraft.",
+    legacy: "Bridged small-scale lab tests to real spacecraft emergency ventilation and fire suppression design."
+  },
+  {
+    id: "artemis",
+    source: "https://science.nasa.gov/biological-physical/investigations/sofie/",
+    decade: "2022 onward",
+    title: "Artemis, SoFIE & Moon/Mars Exploration",
+    facility: "ISS CIR / Artemis Gateway & Lunar Base",
+    icon: "🌕",
+    discovery: "SoFIE varies oxygen and pressure to study solid-fuel ignition and extinction in microgravity.",
+    narrative: "The SoFIE insert in the ISS Combustion Integrated Rack supports research on solid samples under different oxygen concentrations and pressures.",
+    legacy: "Informs future studies of spacecraft material flammability and fire safety."
+  }
+];
+
+function renderExplorationAdvisor(envKey = "iss") {
+  const env = EXPLORATION_ENVIRONMENTS[envKey] || EXPLORATION_ENVIRONMENTS.iss;
+  const navEl = byId("env-nav");
+  if (navEl) {
+    for (const btn of navEl.querySelectorAll(".env-tab")) {
+      const active = btn.dataset.env === envKey;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-selected", String(active));
+    }
+  }
+  const displayEl = byId("env-display");
+  if (!displayEl) return;
+  displayEl.setAttribute("aria-labelledby", `tab-${envKey}`);
+  displayEl.innerHTML = `
+    <div class="env-card">
+      <div class="env-card-header">
+        <div>
+          <span class="env-badge">${escape(env.badge)}</span>
+          <h3>${escape(env.name)}</h3>
+        </div>
+      </div>
+      <div class="env-metrics-grid">
+        <div class="env-metric"><span class="mono muted">TOTAL PRESSURE</span><strong>${escape(env.pressure)}</strong></div>
+        <div class="env-metric"><span class="mono muted">O₂ CONCENTRATION</span><strong class="env-val-o2">${escape(env.oxygen)}</strong></div>
+      </div>
+      <div class="env-analysis-grid">
+        <div class="env-box">
+          <h4>Scenario</h4>
+          <p>${escape(env.scope)}</p>
+          ${env.atmosphereUrl ? `<a class="citation" href="${env.atmosphereUrl}" target="_blank" rel="noreferrer">NASA exploration atmosphere ↗</a>` : ""}
+        </div>
+        <div class="env-box env-rule-box">
+          <h4>Scope of BASS-II evidence</h4>
+          <p>${escape(env.evidence)}</p>
+          <a class="citation" href="${env.url}" target="_blank" rel="noreferrer">${escape(env.source)} ↗</a>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderTimeline(eraId = "iss") {
+  const navEl = byId("timeline-nav");
+  if (navEl) {
+    navEl.innerHTML = NASA_DECADAL_ERAS.map((era) => {
+      const active = era.id === eraId;
+      return `<button type="button" role="tab" class="timeline-tab ${active ? "active" : ""}" data-era="${escape(era.id)}" aria-selected="${active}">
+        <span class="timeline-tab-era mono">${escape(era.decade)}</span>
+        <span class="timeline-tab-title">${escape(era.title)}</span>
+      </button>`;
+    }).join("");
+  }
+  const cardEl = byId("timeline-card");
+  if (!cardEl) return;
+  const era = NASA_DECADAL_ERAS.find((e) => e.id === eraId) || NASA_DECADAL_ERAS[2];
+  cardEl.innerHTML = `
+    <div class="timeline-detail">
+      <div class="timeline-detail-head">
+        <div class="timeline-era-pill mono">${escape(era.icon)} ${escape(era.decade)}</div>
+        <h3>${escape(era.title)}</h3>
+        <span class="timeline-facility mono">FACILITY: ${escape(era.facility)}</span>
+      </div>
+      <div class="timeline-discovery-banner">
+        <strong>Pivotal Discovery:</strong> ${escape(era.discovery)}
+      </div>
+      <p class="timeline-narrative">${escape(era.narrative)}</p>
+      <div class="timeline-legacy">
+        <strong class="mono">MISSION ARCHITECTURE RELEVANCE:</strong>
+        <p>${escape(era.legacy)}</p>
+        <a class="citation" href="${era.source}" target="_blank" rel="noreferrer">NASA ↗</a>
+      </div>
+    </div>
+  `;
+}
+
+/* ==========================================================================
    EVENT LISTENERS & INITIALIZATION
    ========================================================================== */
 
@@ -502,6 +703,16 @@ byId("reset-filters").addEventListener("click", () => {
   byId("query").focus();
 });
 byId("reset-map-filter").addEventListener("click", () => setMapMaterialFilter("", true));
+byId("toggle-regimes")?.addEventListener("click", () => {
+  showExtinctionReference = !showExtinctionReference;
+  const btn = byId("toggle-regimes");
+  if (btn) {
+    btn.setAttribute("aria-pressed", String(showExtinctionReference));
+    btn.textContent = showExtinctionReference ? "Hide PMMA reference" : "Show PMMA reference";
+  }
+  byId("extinction-reference").hidden = !showExtinctionReference;
+  renderFlammabilityMap();
+});
 
 byId("prev").addEventListener("click", () => { page -= 1; renderTable(); });
 byId("next").addEventListener("click", () => { page += 1; renderTable(); });
@@ -522,6 +733,16 @@ byId("reset-selection").addEventListener("click", () => {
 byId("ask-form").addEventListener("submit", (event) => { event.preventDefault(); ask(); });
 
 document.addEventListener("click", (event) => {
+  const envTab = event.target.closest("[data-env]");
+  if (envTab) {
+    renderExplorationAdvisor(envTab.dataset.env);
+    return;
+  }
+  const eraTab = event.target.closest("[data-era]");
+  if (eraTab) {
+    renderTimeline(eraTab.dataset.era);
+    return;
+  }
   const mapPill = event.target.closest("[data-map-material]");
   if (mapPill) {
     setMapMaterialFilter(mapPill.dataset.mapMaterial, false);
@@ -573,6 +794,8 @@ try {
   renderLegend(families);
   renderFlammabilityMap();
   renderOutcomes();
+  renderExplorationAdvisor("iss");
+  renderTimeline("iss");
   renderTable();
   renderRecordings();
 } catch {
