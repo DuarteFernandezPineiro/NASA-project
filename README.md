@@ -10,6 +10,7 @@ An interactive dashboard that explores and summarizes the 129 trials of NASA's *
 - **Documented outcomes.** Ignition and spread counts and percentages, overall and by material family, using all trials in each denominator.
 - **Trial explorer.** Filters, comparison of up to three trials with differences and missing fields marked, CSV downloads and original ISS recordings.
 - **Investigations at a glance.** BASS-II compared with Saffire, FLEX, SAME, DAFT, the ACME experiments and others: what burned, hardware, what varied, key result and which part of fire safety (prevention, detection, suppression) each informs, with a team rating of habitat relevance. Every cell is sourced.
+- **PSI Data Explorer.** Browse, search and export all 23 experimental CSV tables in the repository, covering 21 investigations. Units and CSV line numbers stay with each table. See [coverage and data treatment](flame-in-freefall/DATOS-PSI.md).
 - **Beyond BASS-II.** Test-level data from three more PSI investigations: the 274 FLEX droplet tests plotted by O₂ and pressure against the lunar habitat target, coloured by suppressant (CO₂, helium), with the share of tests ending in flame extinction by O₂ level; the nine Saffire-II samples compared between microgravity and normal gravity; and the BASS run list.
 - **Exploration Advisor.** A comparison of four environments with links to NASA references and the limits of the BASS-II evidence.
 - **Decades of NASA microgravity combustion.** An interactive timeline from drop towers to SoFIE.
@@ -80,7 +81,7 @@ Without a key, the assistant still returns the matching NASA passages.
 
 ## Limitations
 
-- Test-level data cover BASS-II, FLEX and Saffire-II, plus the BASS run list; the other investigations appear as cited context. FLEX burned liquid droplets in still air, so its results are not directly comparable with solid materials in forced flow, and its extinction shares by O₂ band are descriptive.
+- PSI source rows represent different things, including individual tests, samples, session summaries, configurations and reference entries. The FLEX extinction shares by O₂ band describe the droplet tests under their own conditions.
 - Habitat relevance in "Investigations at a glance" is a team assessment, not a NASA rating.
 - Ignition outcome is documented for 116 of 129 trials; flame spread is stated explicitly in only 28.
 - Outcome proportions describe samples tested across different geometries and conditions. See the [field and decision table](flame-in-freefall/DATOS-BASS-II.md).

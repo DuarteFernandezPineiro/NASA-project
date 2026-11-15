@@ -38,6 +38,10 @@ Las [diez pruebas ejecutables y sus resultados](PRUEBAS-IA.md) cubren ambos modo
 
 La [tabla de campos y decisiones](DATOS-BASS-II.md) explica las unidades, el significado de los valores originales y el tratamiento de datos ausentes o ambiguos. El comparador marca condiciones distintas y permite descargar la selección. La tabla de ensayos exporta todos los resultados de los filtros, aunque ocupen varias páginas.
 
+## Catálogo PSI
+
+El explorador PSI incluye todas las tablas CSV del repositorio, con búsqueda, tipo de registro, línea de origen y exportación de la tabla filtrada. La [cobertura y metodología](DATOS-PSI.md) incluye los recuentos por tabla y los comandos de importación.
+
 ## Fuentes
 
 - El [catálogo PSI-25](https://doi.org/10.60555/4qc4-de67) aporta 129 registros y las grabaciones iniciales de B1, B3 y F1. Las vistas y secuencias adicionales proceden del [archivo BASS-II de SDSU](http://flame.sdsu.edu/bass.html), citado en la sección 2.1.2 del informe de NASA. Se convierten a MP4 para reproducción web. El catálogo `dist/media/catalog.json` conserva las fuentes y duraciones.
