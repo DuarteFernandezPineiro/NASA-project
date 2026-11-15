@@ -1,4 +1,4 @@
-import { documents, embeddingConfig, findEvidence, namedTrialEvidence, rankEvidence } from "./dist/evidence.js";
+import { airReading, asksLunarSpread, documents, methods, embeddingConfig, findEvidence, namedTrialEvidence, rankEvidence } from "./dist/evidence.js";
 
 const endpoint = "https://api.openai.com/v1/responses";
 const embeddingsEndpoint = "https://api.openai.com/v1/embeddings";
@@ -65,10 +65,15 @@ export async function answerQuestion(question, trials, env, request = fetch) {
   const asksForSafety = safetyQuestion.test(question);
   const namedTrials = asksForSafety ? [] : namedTrialEvidence(question, trials).slice(0, 9);
   // For factual questions about named trials, related experiments can supply misleading values.
-  const queryVector = namedTrials.length ? null : await embedQuestion(question, env, request);
+  const lunar = asksLunarSpread(question);
+  const queryVector = namedTrials.length || lunar ? null : await embedQuestion(question, env, request);
   // For safety or comparison questions, passages that only describe the test setup are left out:
   // the model tends to turn a remark about a sample's convenience into a safety claim.
-  const sources = asksForSafety
+  const lunarScope = lunar && {
+    ...methods.find(({ id }) => id === "gravity"), doc: "report",
+    text: "Section 2.3.7 compares normal-gravity downward flame spread of PMMA with experiments on the ISS in microgravity. This comparison does not include lunar gravity.",
+  };
+  const sources = lunar ? [lunarScope] : asksForSafety
     ? rankEvidence(question, trials, 16, queryVector).filter((source) => source.setup || !methodTitle.test(source.title)).slice(0, 9)
     : namedTrials.length ? namedTrials : rankEvidence(question, trials, 9, queryVector);
   if (!sources.length) return fallback("La búsqueda no encontró evidencia vinculada para esta pregunta.");
@@ -96,7 +101,8 @@ export async function answerQuestion(question, trials, env, request = fetch) {
         initialO2CalibratedPercent: source.setup.initialO2CalibratedPercentByVolume,
         ...(source.setup.initialO2UncalibratedPercentByVolume
           ? { initialO2UncalibratedPercent: source.setup.initialO2UncalibratedPercentByVolume } : {}),
-        airVelocityReadingsCmPerS: source.setup.airDisplay,
+        airDisplayOriginal: source.setup.airDisplay,
+        airSingleReadingCmPerS: airReading(source.setup.airDisplay).value,
       },
       observationNote: source.text,
     }
@@ -126,14 +132,15 @@ export async function answerQuestion(question, trials, env, request = fetch) {
           asksForSafety
             ? "En implication puedes señalar una implicación para seguridad, acotada a las condiciones ensayadas y con los IDs de apoyo. Evita recomendaciones operativas y afirmaciones de eficacia o idoneidad. Si la evidencia no alcanza, deja text e ids vacíos."
             : "La pregunta busca un dato experimental o una explicación factual. Deja vacíos text e ids de implication. Omite detalles ajenos a lo preguntado.",
+          "Al explicar la calibración del radiómetro, distingue la señal sin calibrar del voltaje del ventilador, que sí se contrastó al final de cada jornada, si lo indica la fuente.",
           "Cada fuente lleva un campo series que indica a qué investigador, material y ensayos se refiere. Un pasaje solo describe su propia serie: no lo uses para afirmar nada de un ensayo o material de otra serie, y si mezclas series dilo expresamente. Ignora las fuentes que no respondan a la pregunta aunque estén adjuntas; es preferible una respuesta corta.",
           "Unidades: conserva siempre la unidad que da la fuente. Un valor que la fuente da en cm/s o mm/s es una velocidad y se cita como tal. La única excepción son los números que, dentro de una observationNote de ensayo, siguen literalmente a 'fan pot', 'pot' o 'fan setting': esos son ajustes del potenciómetro del ventilador, sin unidad, y no deben expresarse en cm/s. Nunca conviertas una velocidad en cm/s en un ajuste de potenciómetro ni al revés.",
           "Si el oxígeno es relevante para la pregunta, distingue el valor calibrado de la lectura sin calibrar y de una estimación anotada. Nunca ordenes ni declares diferentes dos concentraciones comparando una estimación con una lectura de otro tipo. Conserva la configuración de la muestra y distingue una media de un máximo. Traduce por completo al idioma de la respuesta (por ejemplo, 'sooty' es 'con hollín', referido a la llama) y no menciones nombres de campos de los datos.",
           "Los pasajes llevan un campo role. Los de role 'method or context' describen cómo se montó el ensayo o por qué se eligió una muestra: úsalos solo para explicar el método, nunca como base de una afirmación o interpretación sobre cómo se comporta un material frente al fuego ni sobre su seguridad. Esas afirmaciones solo pueden apoyarse en pasajes de role 'results' o en observaciones de ensayo.",
           "Que una muestra no prenda, solo prenda un instante o no propague la llama describe ese ensayo. Por sí solo no acredita un material como barrera contra el fuego ni demuestra su idoneidad para naves. Si la pregunta pide comparar materiales y la evidencia no los ensaya en condiciones equivalentes, dilo en limitation.",
-          "No extrapoles fuera de lo ensayado: BASS-II cubre aproximadamente 13,6-22,2 % de O2 inicial a presión de la ISS, flujos forzados de baja velocidad y muestras pequeñas. Si se pide predecir fuera del rango observado, responde que los datos son insuficientes y cita las condiciones que sí se ensayaron. No enumeres resultados de otras series ni hagas afirmaciones sobre simulaciones que no sean necesarias para explicar ese límite.",
+          "No extrapoles fuera de lo ensayado: BASS-II cubre aproximadamente 13,6-22,2 % de O2 inicial a presión de la ISS, flujos forzados de baja velocidad y muestras pequeñas. Si se pide predecir fuera del rango observado, responde que los datos son insuficientes y cita las condiciones que sí se ensayaron. Si se pide una velocidad en gravedad lunar, cita la comparación de PMMA en gravedad normal descendente y microgravedad y abstente de expresar una velocidad para ese entorno. Omite cifras de velocidad ajenas a la pregunta.",
           "En limitation indica solo qué falta o qué es incierto para responder, sin añadir hechos nuevos. Si ya respondiste todas las partes de la pregunta, deja limitation vacío. Si el informe permite explicar por qué los datos no responden, cita esa explicación en claims.",
-          "Air display registra las lecturas de velocidad del aire en cm/s. No las llames calibradas ni las trates como un umbral exacto de extinción salvo que la observación del ensayo lo indique. Los ajustes del potenciómetro no son velocidades. Nunca inventes valores, ensayos, enlaces o páginas.",
+          "Valores en airSingleReadingCmPerS son lecturas individuales y deben llevar explícitamente la unidad cm/s. Air display puede contener una lectura de velocidad en cm/s, una secuencia o anotaciones con ajustes y otros valores. Conserva la secuencia como texto original o cita solo una lectura con unidad y momento cuando la observación lo aclare. No interpretes el primer número como velocidad inicial por defecto ni llames al valor calibrado o umbral de extinción sin evidencia. Los ajustes del potenciómetro no son velocidades. Nunca inventes valores, ensayos, enlaces o páginas.",
         ].join(" "),
         input: JSON.stringify({ question, evidence }),
         text: { format: { type: "json_schema", strict: true, name: "nasa_evidence_answer", schema } },
@@ -163,7 +170,7 @@ export async function answerQuestion(question, trials, env, request = fetch) {
     if (parsed.limitation) claims.push({ text: parsed.limitation, sources: [] });
     return {
       mode: "ai",
-      retrieval: namedTrials.length ? "trial" : queryVector ? "hybrid" : "keyword",
+      retrieval: lunar ? "scope" : namedTrials.length ? "trial" : queryVector ? "hybrid" : "keyword",
       claims: claims.length ? claims : [{ text: "La evidencia recuperada es insuficiente.", sources: [] }],
     };
   } catch {
