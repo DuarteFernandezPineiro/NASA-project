@@ -48,12 +48,38 @@
       </figure>
     </section>
 
+    <section class="findings" aria-labelledby="findings-title">
+      <h2 id="findings-title" class="mono">KEY FINDINGS FOR CREWED HABITATS</h2>
+      <ol class="findings-list">
+        <li>
+          <strong>Microgravity extends flammability</strong>
+          <p>PMMA rods kept burning down to <b>13.5% O₂</b> in the weak airflow typical of spacecraft ventilation near surfaces, below the <b>15.4%</b> limit of the normal-gravity upward test NASA uses to screen materials.</p>
+          <a class="citation" href="https://ntrs.nasa.gov/api/citations/20210011385/downloads/TM-20210011385.pdf#page=84" target="_blank" rel="noreferrer">NASA TM · §6.1.4 · p. 76 ↗</a>
+        </li>
+        <li>
+          <strong>Starving the flame works</strong>
+          <p>Thin PMMA stops spreading below a <b>critical opposed-flow velocity</b>. It does not depend on film thickness and rises as O₂ falls, so cutting ventilation is more effective in leaner air.</p>
+          <a class="citation" href="https://ntrs.nasa.gov/api/citations/20210011385/downloads/TM-20210011385.pdf#page=36" target="_blank" rel="noreferrer">NASA TM · §2.2.8 · p. 28 ↗</a>
+        </li>
+        <li>
+          <strong>Small fires, toxic smoke</strong>
+          <p>Most tests released well below 100 W, yet <b>CO/CO₂ ratios were an order of magnitude higher</b> than in efficient flue gases: detection and air scrubbing matter as much as the flame.</p>
+          <a class="citation" href="https://ntrs.nasa.gov/api/citations/20210011385/downloads/TM-20210011385.pdf#page=19" target="_blank" rel="noreferrer">NASA TM · §1.6 · p. 11 ↗</a>
+        </li>
+        <li class="finding-gap">
+          <strong>The lunar gap</strong>
+          <p>A Moon base is expected to run at <b>≥30% O₂</b> and ≤10.2 psi. BASS-II covers 13.6–22.2% O₂ at ISS pressure, so <b>no trial here reaches lunar habitat conditions</b>.</p>
+          <a class="citation" href="https://www.spaceappschallenge.org/2026/challenges/flame-in-freefall/" target="_blank" rel="noreferrer">Challenge brief ↗</a>
+        </li>
+      </ol>
+    </section>
+
     <section id="flammability" class="flammability-grid" aria-labelledby="flam-title">
       <div class="panel flam-chart-panel">
         <header class="panel-heading">
           <div>
             <h2 id="flam-title">Flammability Map · O₂ vs. Airflow</h2>
-            <p>Calibrated initial oxygen concentration against airflow velocity by material family. Click any point to inspect the trial.</p>
+            <p>Calibrated initial O₂ against the initial airflow reading, coloured by material. Filled points sustained a flame; rings only flashed or did not ignite. Click any point to inspect the trial.</p>
           </div>
           <button class="text-button" id="reset-map-filter" type="button" hidden>Show all materials</button>
         </header>
@@ -64,6 +90,7 @@
         </div>
         <div class="chart-footer mono">
           <span id="plotted-count">Plotting valid O₂ &amp; flow records…</span>
+          <span class="outcome-key"><i class="key-filled"></i> Sustained <i class="key-ring"></i> Brief / none <i class="key-dashed"></i> Not documented</span>
           <span>Dashed lines: 21% Earth O₂ · 18% Hypoxic threshold</span>
         </div>
       </div>
@@ -72,10 +99,11 @@
         <header class="panel-heading">
           <div>
             <h2 id="ranking-title">Hazard Ranking</h2>
-            <p>Materials ordered by microgravity fire risk (low O₂ threshold, ΔO₂ burn severity &amp; sustained spread).</p>
+            <p>Ordered by documented outcomes: lowest O₂ with a sustained flame, share of trials that burned, and O₂ consumed.</p>
           </div>
         </header>
         <ol class="hazard-list" id="hazard-list"></ol>
+        <p class="ranking-note">Team heuristic, not a NASA flammability rating. Materials were tested under different conditions and sample sizes.</p>
       </aside>
     </section>
 
@@ -122,8 +150,8 @@
       </section>
 
       <aside id="assistant" class="panel assistant" aria-labelledby="assistant-title">
-        <div class="assistant-head"><span class="assistant-icon" aria-hidden="true">✳</span><div><h2 id="assistant-title">AI Report Query</h2><p class="mono">REPORT NASA/TM-20210011385</p></div></div>
-        <p class="assistant-intro">Ask about a BASS-II experimental finding and jump directly to the supporting NASA report pages.</p>
+        <div class="assistant-head"><span class="assistant-icon" aria-hidden="true">✳</span><div><h2 id="assistant-title">Ask NASA Documents</h2><p class="mono">NASA/TM-20210011385 · ISS COMBUSTION GUIDE 2015</p></div></div>
+        <p class="assistant-intro">Ask about BASS-II results or microgravity combustion and jump to the supporting pages of the BASS-II report and NASA's ISS combustion guide.</p>
         <div class="prompts">
           <button type="button" data-question="What happened when airflow was cut off in trial B1?"><span aria-hidden="true">↳</span> What happened when airflow was cut off in B1?</button>
           <button type="button" data-question="What did NASA observe in trial F1 with Nomex?"><span aria-hidden="true">↳</span> What did NASA observe in trial F1?</button>
@@ -132,7 +160,7 @@
         <form id="ask-form">
           <label for="question">Your question</label>
           <textarea id="question" rows="3" required maxlength="500" placeholder="Under what conditions did the flame spread?"></textarea>
-          <button class="primary" id="ask" type="submit">Query report <span aria-hidden="true">↑</span></button>
+          <button class="primary" id="ask" type="submit">Ask <span aria-hidden="true">↑</span></button>
         </form>
         <div id="answer" role="status" aria-live="polite"></div>
         <a class="source-bottom" href="https://ntrs.nasa.gov/api/citations/20210011385/downloads/TM-20210011385.pdf#page=111" target="_blank" rel="noreferrer">Open Appendix A ↗</a>
