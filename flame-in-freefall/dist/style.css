@@ -389,13 +389,13 @@ dialog::backdrop { background: #080b08bf; }
 
 /* Beyond BASS-II */
 .beyond { margin-bottom: 24px; }
-.beyond-grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 1px; background: var(--line); border-top: 1px solid var(--line); }
-.beyond-chart, .beyond-side { background: var(--panel); margin: 0; padding: 18px 22px; display: flex; flex-direction: column; gap: 8px; }
+.beyond-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 1px; background: var(--line); border-top: 1px solid var(--line); }
+.beyond-chart, .beyond-side { min-width: 0; background: var(--panel); margin: 0; padding: 18px 22px; display: flex; flex-direction: column; gap: 8px; }
 .beyond-chart figcaption { display: flex; flex-direction: column; gap: 2px; }
 .beyond-chart figcaption span { color: var(--dim); font-size: 12.5px; }
 .beyond-chart .chart-footer { padding: 0; border: 0; }
-.beyond-chart .citation, .beyond-side > .citation { align-self: flex-start; }
-.flex-legend { display: flex; gap: 14px; font-size: 11px; color: var(--dim); }
+.beyond-chart .citation, .beyond-side > .citation { align-self: flex-start; overflow-wrap: anywhere; max-width: 100%; }
+.flex-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11px; color: var(--dim); }
 .flex-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
 .beyond-side h3 { font: 700 20px/1.1 var(--display); margin-top: 6px; }
 .beyond-side .muted { font-size: 13px; }
@@ -408,7 +408,7 @@ dialog::backdrop { background: #080b08bf; }
 .saffire-table tr.saffire-nospread td strong { color: var(--safe); }
 .beyond .ranking-note { border: 0; padding: 4px 0 0; }
 .beyond .ranking-note .citation { margin-left: 6px; }
-@media (max-width: 1100px) { .beyond-grid { grid-template-columns: 1fr; } }
+@media (max-width: 1100px) { .beyond-grid { grid-template-columns: minmax(0, 1fr); } }
 .flex-point { stroke-width: 1.5; }
 .flex-point:hover { stroke: var(--ink); stroke-width: 2; }
 
@@ -424,3 +424,33 @@ dialog::backdrop { background: #080b08bf; }
 .findings-list { grid-template-columns: repeat(3, 1fr); }
 @media (max-width: 1100px) { .findings-list { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px) { .findings-list { grid-template-columns: 1fr; } }
+
+/* PSI source tables */
+.datasets { margin-bottom: 24px; min-width: 0; }
+.dataset-jump { display: block; margin-top: 7px; color: var(--lime); font-size: 12px; }
+.dataset-controls { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, .8fr); gap: 12px; padding: 15px 22px; border-block: 1px solid var(--line); }
+.dataset-controls label { min-width: 0; display: grid; gap: 5px; color: var(--dim); font-size: 12px; }
+.dataset-controls :is(input, select) { width: 100%; min-width: 0; min-height: 39px; }
+.dataset-profile { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 15px 22px 5px; }
+.dataset-profile h3 { font: 700 20px/1.15 var(--display); color: var(--ink); }
+.dataset-profile p { margin-top: 5px; color: var(--dim); font-size: 12px; overflow-wrap: anywhere; }
+.dataset-profile #psi-counts { color: var(--lime); }
+.dataset-guide { color: var(--dim); font-size: 12px; padding: 4px 22px 12px; }
+.dataset-scroll { max-height: 530px; border-top: 1px solid var(--line); }
+.dataset-table { width: max-content; min-width: 100%; }
+.dataset-table :is(th, td) { text-align: left; vertical-align: top; white-space: normal; min-width: 100px; max-width: 330px; }
+.dataset-table td { white-space: pre-wrap; overflow-wrap: anywhere; }
+.dataset-table thead th { position: sticky; top: 0; z-index: 2; background: var(--panel); }
+.dataset-table .dataset-line { min-width: 76px; position: sticky; left: 0; background: var(--panel); color: var(--dim); border-right: 1px solid var(--line); }
+.dataset-table thead .dataset-line { z-index: 3; }
+.dataset-repeat { display: block; color: var(--dim); font-size: 11px; }
+.dataset-missing { color: var(--dim); }
+.dataset-footer { padding: 12px 22px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.dataset-footer p, #psi-page { color: var(--dim); font-size: 12px; }
+.dataset-footer div { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dataset-footer div button:not(.primary) { min-width: 40px; min-height: 36px; }
+@media (max-width: 640px) {
+  .dataset-controls { grid-template-columns: 1fr; }
+  .dataset-profile { flex-wrap: wrap; }
+  .dataset-controls, .dataset-profile, .dataset-guide, .dataset-footer { padding-inline: 14px; }
+}

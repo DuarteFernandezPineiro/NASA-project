@@ -1,3 +1,4 @@
+import { loadDatasetExplorer } from "./datasets.js";
 import { airReading, findEvidence, isMissing, loadIndex, reportLink } from "./evidence.js";
 
 const byId = (id) => document.getElementById(id);
@@ -456,6 +457,10 @@ function downloadCsv(records, filename) {
     ["Report observation", (trial) => trial.report?.observation],
   ];
   const rows = [fields.map(([label]) => label), ...records.map((trial) => fields.map(([, getter]) => getter(trial)))];
+  saveCsv(rows, filename);
+}
+
+function saveCsv(rows, filename) {
   const url = URL.createObjectURL(new Blob(["\uFEFF", rows.map((row) => row.map(csvCell).join(",")).join("\r\n"), "\r\n"],
     { type: "text/csv;charset=utf-8" }));
   const download = document.createElement("a");
@@ -798,21 +803,21 @@ const INVESTIGATIONS = [
     sources: [["NASA TM §1.1", `${SRC.report}#page=11`], ["§6.1.4", `${SRC.report}#page=84`], ["Guide p. 21", `${SRC.guide}#page=21`]],
   },
   {
-    name: "Saffire-I, II, III", dataNote: "Saffire-II samples in this dashboard", psi: [["PSI-98", "10.60555/0t15-1z43"], ["PSI-99", "10.60555/2chp-m469"], ["PSI-100", "10.60555/040q-4h36"]], fronts: ["prevention"], relevance: 3,
+    name: "Saffire-I, II, III", psi: [["PSI-98", "10.60555/0t15-1z43"], ["PSI-99", "10.60555/2chp-m469"], ["PSI-100", "10.60555/040q-4h36"]], fronts: ["prevention"], relevance: 3,
     fuel: "Large solid samples such as fabrics and plastics",
     setup: "Flow unit of about 53 × 90 × 133 cm inside an uncrewed Cygnus cargo vehicle",
     varies: "Sample size, material, flow; Saffire-II checked O₂ flammability limits",
     finding: "Spacecraft-scale fires designed to measure flame spread and heat release and to check NASA's normal-gravity screening test.",
-    data: "Context only",
+    data: "Saffire-I–III sample tables",
     sources: [["NASA Saffire 2016", SRC.saffire], ["Challenge brief", SRC.brief]],
   },
   {
-    name: "FLEX / FLEX-2", dataNote: "274 FLEX tests in this dashboard", psi: [["PSI-69", "10.60555/mbq8-0451"], ["PSI-68", "10.60555/byp8-h018"]], fronts: ["suppression"], relevance: 3,
+    name: "FLEX / FLEX-2", psi: [["PSI-69", "10.60555/mbq8-0451"], ["PSI-68", "10.60555/byp8-h018"]], fronts: ["suppression"], relevance: 3,
     fuel: "Liquid fuel droplets: heptane, methanol; FLEX-2 adds mixtures and fuel surrogates",
     setup: "Multi-user Droplet Combustion Apparatus in the Combustion Integrated Rack",
     varies: "Inert diluent added to the atmosphere: nitrogen, CO₂, helium or xenon",
     finding: "Flammability limits are lower in reduced gravity, so Earth standards for inert-gas suppressants give less safety margin.",
-    data: "Context only",
+    data: "FLEX trials and FLEX-2 configurations",
     sources: [["Guide p. 12", `${SRC.guide}#page=12`], ["Challenge brief", SRC.brief]],
   },
   {
@@ -821,16 +826,16 @@ const INVESTIGATIONS = [
     setup: "Microgravity Science Glovebox (2007 and 2010)",
     varies: "Material and heating; measures smoke particle-size distribution",
     finding: "Smoke properties change without buoyancy, which guides the design of spacecraft smoke detectors.",
-    data: "Context only",
+    data: "SAME configurations and SAME-R run log",
     sources: [["Guide p. 26", `${SRC.guide}#page=26`], ["Guide p. 45", `${SRC.guide}#page=45`]],
   },
   {
-    name: "DAFT / DAFT-2", fronts: ["detection"], relevance: 2,
+    name: "DAFT / DAFT-2", psi: [["PSI-47", null]], fronts: ["detection"], relevance: 2,
     fuel: "No fire: background dust and aerosols in the ISS cabin",
     setup: "Instrument also used for smoke detection in SAME",
     varies: "Cabin aerosol levels",
     finding: "Background particle levels set the baseline a smoke detector must ignore to avoid false alarms.",
-    data: "Context only",
+    data: "DAFT aerosol sessions",
     sources: [["Guide p. 26", `${SRC.guide}#page=26`], ["Challenge brief", SRC.brief]],
   },
   {
@@ -839,7 +844,7 @@ const INVESTIGATIONS = [
     setup: "ACME hardware in the Combustion Integrated Rack",
     varies: "Fuel flow controlled by heat flux and surface temperature, still atmosphere",
     finding: "Aims to test whether existing flammability test methods hold in low and partial gravity.",
-    data: "Context only",
+    data: "Session ignition counts",
     sources: [["Guide p. 15", `${SRC.guide}#page=15`], ["Challenge brief", SRC.brief]],
   },
   {
@@ -848,7 +853,7 @@ const INVESTIGATIONS = [
     setup: "Spherical burner in the ACME combustion chamber",
     varies: "Oxygen-nitrogen mixtures of up to 85% O₂ flowing from the burner (inside-out flames)",
     finding: "The highest O₂ concentrations tested in microgravity, relevant to oxygen-rich habitat atmospheres, but with gaseous fuels only.",
-    data: "Context only",
+    data: "Normal and inverse flame test records",
     sources: [["Challenge brief", SRC.brief]],
   },
   {
@@ -857,7 +862,7 @@ const INVESTIGATIONS = [
     setup: "Multi-user Droplet Combustion Apparatus in the Combustion Integrated Rack",
     varies: "Fuel type, pressure, diluent",
     finding: "FLEX found cool flames burning on after the visible flame went out; CFI studies their stability and spontaneous re-ignition.",
-    data: "Context only",
+    data: "Droplet run log",
     sources: [["Guide p. 13", `${SRC.guide}#page=13`], ["Guide p. 41", `${SRC.guide}#page=41`]],
   },
   {
@@ -866,7 +871,7 @@ const INVESTIGATIONS = [
     setup: "ACME hardware with up to 10 kV between burner and mesh",
     varies: "Electric field strength, fuel dilution",
     finding: "The electric field acting on flame ions was used to mimic partial gravity.",
-    data: "Context only",
+    data: "Session summaries and condition details",
     sources: [["Guide p. 16", `${SRC.guide}#page=16`], ["Challenge brief", SRC.brief]],
   },
   {
@@ -875,7 +880,7 @@ const INVESTIGATIONS = [
     setup: "Fan-driven flow duct in the Microgravity Science Glovebox (later reused by BASS)",
     varies: "Fuel and coflow velocity",
     finding: "Soot formation, smoke point and flame liftoff; mainly combustion science, indirectly relevant to smoke.",
-    data: "Context only",
+    data: "SPICE measurements and SLICE session summaries",
     sources: [["Guide p. 13", `${SRC.guide}#page=13`], ["Guide p. 14", `${SRC.guide}#page=14`]],
   },
   {
@@ -890,6 +895,8 @@ const INVESTIGATIONS = [
 ];
 
 const FRONT_LABEL = { prevention: "Prevention", detection: "Detection", suppression: "Suppression" };
+const datasetLinks = new Map();
+
 const RELEVANCE_LABEL = { 3: ["High", "rel-high"], 2: ["Medium", "rel-medium"], 1: ["Low", "rel-low"] };
 let activeFront = "";
 
@@ -900,9 +907,10 @@ function renderInvestigations() {
   byId("investigation-rows").innerHTML = rows.map((item) => {
     const [label, cls] = RELEVANCE_LABEL[item.relevance];
     return `<tr>
-      <th scope="row"><strong>${escape(item.name)}</strong><span class="inv-data">${escape(item.dataNote || item.data)}</span>${
+      <th scope="row"><strong>${escape(item.name)}</strong><span class="inv-data">${escape(item.data)}</span>${
         (item.psi || []).map(([id, doi]) => `<a class="psi-link" href="${doi ? `https://doi.org/${doi}` : `https://psi.nasa.gov/physci/repo/data/investigations/${id}`}" target="_blank" rel="noreferrer">${id}${doi ? ` · doi:${doi}` : ""} ↗</a>`).join("")
-      }</th>
+      }${(item.psi || []).flatMap(([id]) => (datasetLinks.get(id) ?? []).map(({ id: table, name }) =>
+        `<a class="dataset-jump" href="?dataset=${encodeURIComponent(table)}#datasets">${escape(name)} table ↗</a>`)).join("")}</th>
       <td>${item.fronts.map((f) => `<span class="front-tag front-${f}">${FRONT_LABEL[f]}</span>`).join("")}</td>
       <td>${escape(item.fuel)}</td>
       <td>${escape(item.setup)}</td>
@@ -1027,6 +1035,13 @@ byId("investigations").querySelector(".front-filters").addEventListener("click",
   renderInvestigations();
 });
 renderInvestigations();
+loadDatasetExplorer({ escape, normalize, saveCsv }).then((datasets) => {
+  for (const dataset of datasets) {
+    if (!datasetLinks.has(dataset.psi)) datasetLinks.set(dataset.psi, []);
+    datasetLinks.get(dataset.psi).push(dataset);
+  }
+  if (datasets.length) renderInvestigations();
+});
 loadPsiExtra();
 
 modal.addEventListener("close", () => { modalBody.replaceChildren(); requester?.focus(); });
