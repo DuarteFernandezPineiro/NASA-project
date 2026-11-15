@@ -5,7 +5,7 @@ const client = new URL("dist/client/", root);
 const server = new URL("dist/server/", root);
 await mkdir(client, { recursive: true });
 await mkdir(server, { recursive: true });
-for (const path of ["index.html", "style.css", "trials.json", "psi-extra.json", "chunks.json", "app.js", "evidence.js", "media"]) {
+for (const path of ["index.html", "style.css", "trials.json", "psi-extra.json", "psi-catalog.json", "datasets.js", "chunks.json", "app.js", "evidence.js", "media"]) {
   await cp(new URL(`dist/${path}`, root), new URL(path, client), { recursive: true });
 }
 const evidence = await readFile(new URL("dist/evidence.js", root), "utf8");
