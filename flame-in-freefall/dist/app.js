@@ -24,10 +24,13 @@ let page = 1;
 let sort = 0;
 let requester;
 let pending = false;
+let showRegimes = true;
 
 function formatFamily(raw) {
   const map = {
-    "Varilla sin polímero explícito": "Polymer rod (unspecified)",
+    "Varilla PMMA": "PMMA (Cylindrical rods)",
+    "Varilla sin polímero explícito": "PMMA (Cylindrical rods)",
+    "PMMA": "PMMA (Films & slabs)",
     "Otros": "Other materials",
     "Cera": "Wax"
   };
@@ -235,6 +238,31 @@ function renderFlammabilityMap() {
   markup += `<rect class="chart-lunar" x="${pad.left}" y="${gapTop}" width="${plotW}" height="${yScale(30) - gapTop}" />`;
   markup += `<text class="chart-lunar-label" x="${pad.left + 12}" y="${gapTop + 20}">PLANNED LUNAR HABITAT · ≥30% O₂ AT ≤10.2 PSI · NO BASS-II DATA</text>`;
   markup += `<text class="chart-gap-label" x="${pad.left + 12}" y="${(yScale(30) + yScale(testedTop)) / 2 + 4}">UNTESTED ABOVE ${number.format(testedTop)}% O₂</text>`;
+
+  if (showRegimes) {
+    // 1. Cabin HVAC airflow envelope (2 to 8 cm/s)
+    const hvacX1 = xScale(2.0);
+    const hvacX2 = xScale(8.0);
+    const hvacTop = yScale(testedTop);
+    const hvacHeight = (pad.top + plotH) - hvacTop;
+    markup += `<rect class="chart-regime-hvac" x="${hvacX1}" y="${hvacTop}" width="${hvacX2 - hvacX1}" height="${hvacHeight}" />`;
+    markup += `<text class="chart-regime-label" x="${(hvacX1 + hvacX2) / 2}" y="${hvacTop + 14}" text-anchor="middle">CABIN HVAC (2–8 cm/s)</text>`;
+
+    // 2. Radiation Quenching Boundary (< 1.5 cm/s, low flow extinction)
+    const radX2 = xScale(1.5);
+    const radTop = yScale(19.0);
+    const radHeight = (pad.top + plotH) - radTop;
+    markup += `<rect class="chart-regime-radiation" x="${pad.left}" y="${radTop}" width="${radX2 - pad.left}" height="${radHeight}" />`;
+    markup += `<text class="chart-regime-label" x="${(pad.left + radX2) / 2}" y="${radTop + 14}" text-anchor="middle">RAD. QUENCH</text>`;
+
+    // 3. Convective Blow-Off Boundary (> 28 cm/s)
+    const blowX1 = xScale(28.0);
+    const blowWidth = (W - pad.right) - blowX1;
+    if (blowWidth > 0) {
+      markup += `<rect class="chart-regime-blowoff" x="${blowX1}" y="${hvacTop}" width="${blowWidth}" height="${hvacHeight}" />`;
+      markup += `<text class="chart-regime-label" x="${blowX1 + 8}" y="${hvacTop + 14}" text-anchor="start">BLOW-OFF (&gt;28 cm/s)</text>`;
+    }
+  }
 
   for (const ref of [{ val: 21, label: "21% Earth O₂" }, { val: 18, label: "18% Threshold" }]) {
     const y = yScale(ref.val);
@@ -479,8 +507,54 @@ function showTrial(trial, trigger) {
     </div>`, trigger);
 }
 
+function generateSIComparison(records) {
+  if (!records || records.length < 2) return null;
+  const ids = records.map((r) => r.id).join(", ");
+  const families = [...new Set(records.map((r) => formatFamily(r.family)))];
+  const flows = records.map((r) => ({ id: r.id, val: parseNumeric(r.air), raw: r.air }));
+  const o2s = records.map((r) => ({ id: r.id, val: r.initialO2 }));
+  const hasNomex = records.some((r) => (r.family || "").toLowerCase().includes("nomex"));
+  const hasPMMA = records.some((r) => (r.family || "").toLowerCase().includes("pmma"));
+
+  let analysis = "";
+  let flightRule = "";
+
+  if (hasNomex && hasPMMA) {
+    const nomex = records.find((r) => (r.family || "").toLowerCase().includes("nomex"));
+    const pmma = records.find((r) => (r.family || "").toLowerCase().includes("pmma"));
+    analysis = `Contrasting flame-retardant Nomex (${nomex.id}) with combustible PMMA (${pmma.id}). Nomex demonstrated zero sustained flame spread in microgravity (${extinctionLabels.get(nomex.extinction) || "self-extinguished"}), while PMMA supported sustained flame propagation with active oxygen consumption and soot production.`;
+    flightRule = "Nomex remains the gold-standard protective barrier for crew flight suits and cargo packaging. Flammable clear PMMA acrylics must be shielded or isolated from forced airflow.";
+  } else if (families.length === 1 && families[0].includes("PMMA")) {
+    const thin = records.find((r) => (r.material || "").includes("micron") || (r.material || "").includes("film"));
+    const thick = records.find((r) => (r.material || "").includes("rod") || (r.material || "").includes("slab") || (r.material || "").includes("mm"));
+    if (thin && thick) {
+      analysis = `Geometric comparison: thin film PMMA (${thin.id}) vs thick PMMA (${thick.id}). Thin films (100–400 µm) heat through rapidly, sustaining flame spread at low velocities and extinguishing almost instantly upon flow cutoff. Thick rods/slabs possess high thermal inertia, leading to delayed ignition, intense pyrolytic vapor jetting, and longer extinction latency.`;
+      flightRule = "Emergency HVAC shutdown halts opposed flame spread on thin polymers within seconds. Thick structural plastics sustain pyrolytic off-gassing and require nitrogen flooding or clean agent suppression.";
+    } else {
+      const f1 = flows[0], f2 = flows[1];
+      if (f1.val != null && f2.val != null && f1.val !== f2.val) {
+        const [fast, slow] = f1.val > f2.val ? [f1, f2] : [f2, f1];
+        analysis = `Airflow sensitivity: ${fast.id} at ${fast.val} cm/s vs ${slow.id} at ${slow.val} cm/s. Higher airflow (5 cm/s) accelerates oxidizer supply to the flame zone, producing soot with a blue leading edge. Reducing airflow (to 2 cm/s) narrows the flame and shifts it to a cooler, primarily blue appearance.`;
+        flightRule = "Spacecraft ventilation ducts (2–8 cm/s) fall inside the peak flammability corridor. Immediate duct isolation eliminates the forced oxidizer draft without inducing blow-off turbulence.";
+      } else {
+        analysis = `Comparing PMMA trials ${ids} under matching airflow conditions (${flows[0].raw || "varied"} cm/s). Oxygen concentrations span ${Math.min(...o2s.map((x) => x.val || 21))}% to ${Math.max(...o2s.map((x) => x.val || 21))}%. Observed outcomes: ${records.map((r) => `${r.id} (${OUTCOME_LABEL[outcomeOf(r)]})`).join(", ")}.`;
+        flightRule = "PMMA sustains microgravity combustion down to 13.5% O₂, proving that materials can remain hazardous in low gravity below their standard 1g upward flammability rating (15.4%).";
+      }
+    }
+  } else {
+    const o2Min = Math.min(...o2s.map((x) => x.val || 21));
+    const o2Max = Math.max(...o2s.map((x) => x.val || 21));
+    const sustainedList = records.filter((r) => outcomeOf(r) === "sustained").map((r) => r.id);
+    analysis = `Cross-material comparison: ${ids} (${families.join(" vs ")}) tested at ${o2Min}%–${o2Max}% initial O₂. ${sustainedList.length ? `Active flame spread sustained in: ${sustainedList.join(", ")}.` : "No sustained flame spread documented in selected trials."}`;
+    flightRule = "Microgravity flammability is dictated by material thermophysical properties and low-speed flow velocity. In the absence of natural buoyant convection, material chemistry and geometry control fire spread.";
+  }
+
+  return { ids, families, analysis, flightRule };
+}
+
 function compare(trigger) {
   const records = Array.from(selected, (id) => trials.find((trial) => trial.id === id));
+  const siInsight = generateSIComparison(records);
   const fields = [
     ["Material", (trial) => trial.material],
     ["Family", (trial) => formatFamily(trial.family)],
@@ -492,6 +566,18 @@ function compare(trigger) {
     ["Report observation", observation],
   ];
   showModal("Compare Trials", `
+    ${siInsight ? `
+    <div class="si-compare-card">
+      <div class="si-compare-head">
+        <span class="si-badge"><i aria-hidden="true">✳</i> Super Intelligence (SI) Comparative Synthesis</span>
+        <span class="mono muted">${escape(siInsight.ids)} · ${escape(siInsight.families.join(" vs "))}</span>
+      </div>
+      <p class="si-compare-text">${escape(siInsight.analysis)}</p>
+      <div class="si-compare-takeaway">
+        <strong class="mono">MISSION FLIGHT RULE TAKEAWAY:</strong>
+        <p>${escape(siInsight.flightRule)}</p>
+      </div>
+    </div>` : ""}
     <div class="table-scroll" role="region" aria-label="Trial comparison" tabindex="0">
       <table class="compare-table">
         <thead><tr><th scope="col">Variable</th>${records.map((trial) => `<th scope="col">${trial.id}</th>`).join("")}</tr></thead>
@@ -543,6 +629,213 @@ async function ask() {
 }
 
 /* ==========================================================================
+   EXPLORATION ADVISOR (MOON, MARS & EVA) & DECADES OF NASA COMBUSTION
+   ========================================================================== */
+
+const EXPLORATION_ENVIRONMENTS = {
+  iss: {
+    id: "iss",
+    name: "ISS & LEO Transit (Microgravity)",
+    badge: "Microgravity · 0g",
+    gravity: "0g (0 m/s²)",
+    pressure: "101.3 kPa · 14.7 psia",
+    oxygen: "21.0% O₂ by volume",
+    o2Partial: "21.3 kPa PO₂",
+    convection: "Zero buoyancy (Quiescent / Forced HVAC only)",
+    flammabilityIndex: "1.0x (Standard baseline)",
+    flammabilityClass: "risk-moderate",
+    flammabilityPercent: 45,
+    physics: "Without gravity-driven buoyant rise, heat and chemical products diffuse spherically around the flame. Natural convection is absent. Burning is entirely dependent on forced cabin ventilation airflow (2–8 cm/s) or astronaut motion.",
+    gapNotice: "Covered by BASS-II dataset (129 trials in 13.6%–22.2% O₂ at ISS cabin pressure).",
+    flightRule: "Flight Rule 1 · Immediate HVAC Shutdown: Halting cabin airflow cuts off the forced oxidizer draft and forces radiation quenching or oxygen starvation within seconds (proven in trial B1). CO/CO₂ scrubbers must activate immediately due to elevated toxic gas yields.",
+    relevance: "Validates fire isolation procedures for Orion transit, commercial space stations, and lunar transit vehicles."
+  },
+  lunar: {
+    id: "lunar",
+    name: "Artemis Gateway & Lunar Habitat",
+    badge: "Partial Gravity · 1/6g",
+    gravity: "0.166g (1.62 m/s²)",
+    pressure: "56.5 kPa · 8.2 psia (Exploration Atmosphere)",
+    oxygen: "34.0% O₂ (Enriched Exploration Standard)",
+    o2Partial: "19.2 kPa PO₂",
+    convection: "Weak partial buoyancy (~16% of Earth buoyant draft)",
+    flammabilityIndex: "1.85x (High Flammability Hazard)",
+    flammabilityClass: "risk-critical",
+    flammabilityPercent: 88,
+    physics: "Partial lunar gravity creates weak natural convective currents that are insufficient to blow out or cool the flame, but enough to establish persistent upward flame orientation. Crucially, the 34% O₂ mole fraction significantly lowers ignition delay and enhances burning rates, vastly outweighing the mitigating effect of lower total pressure.",
+    gapNotice: "The Lunar Gap: Untested in BASS-II (max 22.2% O₂). Addressed by NASA's follow-on SoFIE experiments on the ISS.",
+    flightRule: "Flight Rule 2 · Stricter Material Screening: Materials with marginal pass ratings in standard Earth 1g 21% O₂ tests (NASA-STD-6001 Test 1) can burn vigorously in 34% O₂ lunar atmospheres. Depressurization or active clean-agent flooding is required.",
+    relevance: "Directly governs material flammability certification for Artemis Gateway modules and Lunar Base Camp."
+  },
+  mars: {
+    id: "mars",
+    name: "Mars Surface Habitat",
+    badge: "Partial Gravity · 3/8g",
+    gravity: "0.38g (3.71 m/s²)",
+    pressure: "70.3 kPa · 10.2 psia",
+    oxygen: "28.0% O₂ (Moderate Enrichment)",
+    o2Partial: "19.7 kPa PO₂",
+    convection: "Moderate buoyant draft (~62% of Earth buoyant draft)",
+    flammabilityIndex: "1.45x (Elevated Hazard)",
+    flammabilityClass: "risk-high",
+    flammabilityPercent: 68,
+    physics: "3/8g creates significant natural buoyant draft, forming upward-pointing convective flame plumes and established ceiling smoke layers. Flammability behavior approaches terrestrial trends, but 28% O₂ keeps combustion kinetics elevated.",
+    gapNotice: "Extrapolation gap: Partial gravity combined with 28% O₂ requires empirical modeling from parabolic flight and SoFIE.",
+    flightRule: "Flight Rule 3 · Dual-Layer Detection: Optical smoke detectors in habitat ceilings detect rising convective plumes, while floor-level electrochemical CO/CO₂ monitors detect heavy toxic combustion products. Venting habitat atmosphere to Martian ambient is viable as secondary suppression.",
+    relevance: "Defines habitability and environmental control requirements for Mars surface crew habitats."
+  },
+  eva: {
+    id: "eva",
+    name: "Exploration EVA Spacesuit",
+    badge: "0g to 1/6g · 100% O₂",
+    gravity: "0g to 0.166g",
+    pressure: "29.6 kPa · 4.3 psia",
+    oxygen: "100.0% Pure O₂",
+    o2Partial: "29.6 kPa PO₂ (Hyperoxic)",
+    convection: "Forced breathing loop draft",
+    flammabilityIndex: "3.20x (Extreme Hazard)",
+    flammabilityClass: "risk-critical",
+    flammabilityPercent: 100,
+    physics: "Pure oxygen atmospheres exhibit extreme chemical reactivity. Polymers that self-extinguish in air burn explosively in 100% O₂. Any micro-electrical spark, rapid compression, or friction event provides sufficient ignition energy.",
+    gapNotice: "Out-of-bounds for BASS-II. Tested strictly in dedicated hyperoxic chambers under NASA-STD-6001.",
+    flightRule: "Flight Rule 4 · Zero Combustible Tolerance: Zero exposed combustible polymers permitted in suit cabin or life-support loop. Exclusively certified non-flammable polymers (fluoropolymers, treated Beta cloth, Nomex/Kevlar composites) are flight-authorized.",
+    relevance: "Certifies the exploration extravehicular mobility unit (xEMU) for lunar and Martian spacewalks."
+  }
+};
+
+const NASA_DECADAL_ERAS = [
+  {
+    id: "drop",
+    decade: "1960s–1980s",
+    title: "The Drop Tower Era",
+    facility: "NASA Glenn 2.2s & 5.18s Facilities",
+    icon: "⏱",
+    discovery: "First proof that flames become spherical without buoyant rise.",
+    narrative: "Using the 145-meter vacuum drop tower at NASA Glenn Research Center, researchers achieved up to 5.18 seconds of true microgravity. They proved that without buoyant convection, upward flame flickers vanish, combustion becomes diffusion-controlled, and soot accumulates inside a spherical flame front.",
+    legacy: "Laid the theoretical foundation for microgravity diffusion flames and zero-g droplet combustion."
+  },
+  {
+    id: "shuttle",
+    decade: "1990s",
+    title: "Space Shuttle & Spacelab Missions",
+    facility: "STS-83, STS-94, STS-107",
+    icon: "🚀",
+    discovery: "Discovery of ultra-lean 'flame balls' burning for 500 seconds (SOFBALL).",
+    narrative: "Spacelab missions carried combustion chambers in the Shuttle cargo bay. The SOFBALL experiment revealed stationary spherical flames burning with as little as 1 to 50 milliwatts of chemical power for hundreds of seconds—conditions impossible to observe in Earth gravity.",
+    legacy: "Proved that lean flammability limits extend significantly in low gravity."
+  },
+  {
+    id: "iss",
+    decade: "2008–2020",
+    title: "The ISS Combustion Era (BASS & BASS-II)",
+    facility: "Combustion Integrated Rack (CIR) & MSG",
+    icon: "🛰",
+    discovery: "Cool flames discovery (FLEX) and solid flammability atlas (BASS-II: 129 trials).",
+    narrative: "FLEX discovered 'cool flames' in hydrocarbon droplets burning steadily at 200–400°C with no visible light. Following BASS, BASS-II conducted 129 systematically documented trials on PMMA films, rods, and Nomex in the Microgravity Science Glovebox, establishing low-speed flow flammability envelopes and toxic gas emission ratios.",
+    legacy: "Produced the core experimental dataset powering this dashboard and modern spacecraft safety standards."
+  },
+  {
+    id: "saffire",
+    decade: "2016–2024",
+    title: "Project Saffire (Large-Scale Fires)",
+    facility: "Cygnus Automated Cargo Spacecraft",
+    icon: "🔥",
+    discovery: "First large-scale (1-meter) fires tested in realistic spacecraft cabins.",
+    narrative: "After Cygnus vehicles departed the ISS and before atmospheric re-entry, ground controllers ignited large fabric and PMMA arrays (Saffire I through VI). They demonstrated how full-scale fires spread through microgravity cabin air ducts and evaluated post-fire smoke clearing techniques.",
+    legacy: "Bridged small-scale lab tests to real spacecraft emergency ventilation and fire suppression design."
+  },
+  {
+    id: "artemis",
+    decade: "2024+",
+    title: "Artemis, SoFIE & Moon/Mars Exploration",
+    facility: "ISS CIR / Artemis Gateway & Lunar Base",
+    icon: "🌕",
+    discovery: "Testing materials in 34% O₂ exploration atmospheres for Gateway and Lunar Base Camp.",
+    narrative: "The SoFIE (Solid Fuel Ignition and Extinction) investigation on the ISS is testing solid fuels under exact Artemis exploration conditions (34% O₂, 8.2 psia) and simulated partial gravity to establish spacecraft material screening rules for lunar and Martian human habitats.",
+    legacy: "Directly certifies fire safety for the Artemis Moon base, lunar rovers, and human missions to Mars."
+  }
+];
+
+function renderExplorationAdvisor(envKey = "iss") {
+  const env = EXPLORATION_ENVIRONMENTS[envKey] || EXPLORATION_ENVIRONMENTS.iss;
+  const navEl = byId("env-nav");
+  if (navEl) {
+    for (const btn of navEl.querySelectorAll(".env-tab")) {
+      const active = btn.dataset.env === envKey;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-selected", String(active));
+    }
+  }
+  const displayEl = byId("env-display");
+  if (!displayEl) return;
+  displayEl.innerHTML = `
+    <div class="env-card">
+      <div class="env-card-header">
+        <div>
+          <span class="env-badge ${env.flammabilityClass}">${escape(env.badge)}</span>
+          <h3>${escape(env.name)}</h3>
+        </div>
+        <div class="env-hazard-meter">
+          <div class="env-meter-label"><span class="mono">FLAMMABILITY HAZARD INDEX</span><strong>${escape(env.flammabilityIndex)}</strong></div>
+          <div class="env-meter-bar"><div class="env-meter-fill ${env.flammabilityClass}" style="width:${env.flammabilityPercent}%"></div></div>
+        </div>
+      </div>
+      <div class="env-metrics-grid">
+        <div class="env-metric"><span class="mono muted">TOTAL PRESSURE</span><strong>${escape(env.pressure)}</strong></div>
+        <div class="env-metric"><span class="mono muted">O₂ CONCENTRATION</span><strong class="env-val-o2">${escape(env.oxygen)}</strong></div>
+        <div class="env-metric"><span class="mono muted">O₂ PARTIAL PRESSURE</span><strong>${escape(env.o2Partial)}</strong></div>
+        <div class="env-metric"><span class="mono muted">CONVECTIVE REGIME</span><strong>${escape(env.convection)}</strong></div>
+      </div>
+      <div class="env-analysis-grid">
+        <div class="env-box">
+          <h4><i aria-hidden="true">🔬</i> Combustion &amp; Flame Dynamics</h4>
+          <p>${escape(env.physics)}</p>
+          <small class="mono muted">DATASET LINK: ${escape(env.gapNotice)}</small>
+        </div>
+        <div class="env-box env-rule-box">
+          <h4><i aria-hidden="true">🛡️</i> Actionable Spacecraft Flight Rule</h4>
+          <p>${escape(env.flightRule)}</p>
+          <small class="mono muted">MISSION APPLICATION: ${escape(env.relevance)}</small>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderTimeline(eraId = "iss") {
+  const navEl = byId("timeline-nav");
+  if (navEl) {
+    navEl.innerHTML = NASA_DECADAL_ERAS.map((era) => {
+      const active = era.id === eraId;
+      return `<button type="button" role="tab" class="timeline-tab ${active ? "active" : ""}" data-era="${escape(era.id)}" aria-selected="${active}">
+        <span class="timeline-tab-era mono">${escape(era.decade)}</span>
+        <span class="timeline-tab-title">${escape(era.title)}</span>
+      </button>`;
+    }).join("");
+  }
+  const cardEl = byId("timeline-card");
+  if (!cardEl) return;
+  const era = NASA_DECADAL_ERAS.find((e) => e.id === eraId) || NASA_DECADAL_ERAS[2];
+  cardEl.innerHTML = `
+    <div class="timeline-detail">
+      <div class="timeline-detail-head">
+        <div class="timeline-era-pill mono">${escape(era.icon)} ${escape(era.decade)}</div>
+        <h3>${escape(era.title)}</h3>
+        <span class="timeline-facility mono">FACILITY: ${escape(era.facility)}</span>
+      </div>
+      <div class="timeline-discovery-banner">
+        <strong>Pivotal Discovery:</strong> ${escape(era.discovery)}
+      </div>
+      <p class="timeline-narrative">${escape(era.narrative)}</p>
+      <div class="timeline-legacy">
+        <strong class="mono">MISSION ARCHITECTURE RELEVANCE:</strong>
+        <p>${escape(era.legacy)}</p>
+      </div>
+    </div>
+  `;
+}
+
+/* ==========================================================================
    EVENT LISTENERS & INITIALIZATION
    ========================================================================== */
 
@@ -558,6 +851,15 @@ byId("reset-filters").addEventListener("click", () => {
   byId("query").focus();
 });
 byId("reset-map-filter").addEventListener("click", () => setMapMaterialFilter("", true));
+byId("toggle-regimes")?.addEventListener("click", () => {
+  showRegimes = !showRegimes;
+  const btn = byId("toggle-regimes");
+  if (btn) {
+    btn.setAttribute("aria-pressed", String(showRegimes));
+    btn.textContent = showRegimes ? "Hide physical regimes" : "Show physical regimes";
+  }
+  renderFlammabilityMap();
+});
 
 byId("prev").addEventListener("click", () => { page -= 1; renderTable(); });
 byId("next").addEventListener("click", () => { page += 1; renderTable(); });
@@ -577,6 +879,16 @@ byId("reset-selection").addEventListener("click", () => {
 byId("ask-form").addEventListener("submit", (event) => { event.preventDefault(); ask(); });
 
 document.addEventListener("click", (event) => {
+  const envTab = event.target.closest("[data-env]");
+  if (envTab) {
+    renderExplorationAdvisor(envTab.dataset.env);
+    return;
+  }
+  const eraTab = event.target.closest("[data-era]");
+  if (eraTab) {
+    renderTimeline(eraTab.dataset.era);
+    return;
+  }
   const mapPill = event.target.closest("[data-map-material]");
   if (mapPill) {
     setMapMaterialFilter(mapPill.dataset.mapMaterial, false);
@@ -621,6 +933,8 @@ try {
   renderLegend(families);
   renderFlammabilityMap();
   renderHazardRanking(stats);
+  renderExplorationAdvisor("iss");
+  renderTimeline("iss");
   renderTable();
   renderRecordings();
 } catch {
