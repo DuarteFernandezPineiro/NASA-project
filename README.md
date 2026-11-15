@@ -6,9 +6,11 @@ An interactive dashboard that summarizes, ranks and interprets the 129 trials of
 
 ## What it does
 
-- **Flammability map.** Every trial plotted by initial O₂ against airflow, coloured by material and marked by outcome (sustained flame, brief flame or no ignition). A band marks the planned lunar habitat atmosphere (≥30% O₂), which no BASS-II trial reaches.
-- **Hazard ranking.** Materials ordered by documented outcomes: the lowest O₂ at which a flame was sustained, the share of trials that burned, and the O₂ consumed. Each entry shows how many trials support it.
-- **Trial explorer.** Filters, side-by-side comparison of up to three trials, and the original ISS video recordings.
+- **Exploration Fire Safety Advisor (Moon & Mars).** Interactive exploration environment selector translating BASS-II microgravity findings into operational flight rules across four gravity and atmospheric regimes: ISS/LEO transit (0g, 21% O₂), Artemis Lunar Gateway and Base Camp (1/6g, 34% O₂ Exploration Atmosphere), Mars Surface Habitat (3/8g, 28% O₂), and Exploration EVA spacesuits (100% O₂).
+- **Flammability map & physical regimes.** Every trial plotted by initial O₂ against airflow, coloured by material and marked by outcome. An interactive physical overlay delineates the radiation quenching limit (<1.5 cm/s), the critical spacecraft cabin ventilation draft (2–8 cm/s), convective blow-off (>28 cm/s), and the planned lunar exploration atmosphere (≥30% O₂).
+- **Hazard ranking.** Materials ordered by documented outcomes: the lowest O₂ at which a flame was sustained, the share of trials that burned, and the O₂ consumed. Properly distinguishes PMMA cylindrical rods from thin films and thick slabs.
+- **Trial explorer & SI comparative synthesis.** Filters, side-by-side comparison of up to three trials with automated Super Intelligence (SI) cross-analysis and actionable mission flight rules, plus original ISS video recordings.
+- **Decades of NASA microgravity combustion.** An interactive continuum tracing six decades of microgravity fire research: 1960s drop towers, 1990s Space Shuttle Spacelab & SOFBALL, 2008–2020 ISS CIR/BASS-II, 2016–2024 Project Saffire, and 2024+ Artemis SoFIE.
 - **Ask NASA documents.** A retrieval-augmented assistant over the BASS-II summary report and NASA's ISS combustion guide. Every claim links to the PDF page that supports it; answers flag when a question goes beyond the tested range.
 
 ## Key findings

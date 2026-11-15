@@ -20,6 +20,8 @@
       <a class="brand" href="#" aria-label="Flame in Freefall, home"><span class="brand-mark" aria-hidden="true">✳</span> Flame<span class="muted">/</span>Freefall</a>
       <nav aria-label="Primary navigation">
         <a class="nav-main" href="#flammability">Flammability Map</a>
+        <a href="#exploration">Exploration Advisor</a>
+        <a href="#timeline">Decades of NASA</a>
         <a href="#trials">Trials</a>
         <a href="#recordings">Recordings</a>
         <a href="#assistant">AI Query</a>
@@ -74,14 +76,48 @@
       </ol>
     </section>
 
+    <section id="exploration" class="panel exploration-advisor" aria-labelledby="advisor-title">
+      <header class="panel-heading">
+        <div>
+          <p class="eyebrow mono"><span aria-hidden="true"></span> ARTEMIS &amp; MARS MISSION DIRECTIVE</p>
+          <h2 id="advisor-title">Exploration Fire Safety Advisor · Moon &amp; Mars</h2>
+          <p>Translate microgravity combustion findings into actionable fire safety flight rules for Artemis lunar habitats, Mars surface bases, and EVA spacesuits.</p>
+        </div>
+      </header>
+      <div class="advisor-body">
+        <div class="env-nav" id="env-nav" role="tablist" aria-label="Select space exploration environment">
+          <button type="button" role="tab" class="env-tab active" data-env="iss" id="tab-iss" aria-selected="true" aria-controls="env-display">
+            <span class="env-tab-icon">🛰</span>
+            <span class="env-tab-info"><strong>ISS / LEO Transit</strong><small class="mono">0g · 21% O₂ · 14.7 psia</small></span>
+          </button>
+          <button type="button" role="tab" class="env-tab" data-env="lunar" id="tab-lunar" aria-selected="false" aria-controls="env-display">
+            <span class="env-tab-icon">🌕</span>
+            <span class="env-tab-info"><strong>Artemis Lunar Base</strong><small class="mono">1/6g · 34% O₂ · 8.2 psia</small></span>
+          </button>
+          <button type="button" role="tab" class="env-tab" data-env="mars" id="tab-mars" aria-selected="false" aria-controls="env-display">
+            <span class="env-tab-icon">🔴</span>
+            <span class="env-tab-info"><strong>Mars Surface Base</strong><small class="mono">3/8g · 28% O₂ · 10.2 psia</small></span>
+          </button>
+          <button type="button" role="tab" class="env-tab" data-env="eva" id="tab-eva" aria-selected="false" aria-controls="env-display">
+            <span class="env-tab-icon">👨‍🚀</span>
+            <span class="env-tab-info"><strong>Exploration EVA Suit</strong><small class="mono">0–1/6g · 100% O₂ · 4.3 psia</small></span>
+          </button>
+        </div>
+        <div class="env-content" id="env-display" role="tabpanel"></div>
+      </div>
+    </section>
+
     <section id="flammability" class="flammability-grid" aria-labelledby="flam-title">
       <div class="panel flam-chart-panel">
         <header class="panel-heading">
           <div>
             <h2 id="flam-title">Flammability Map · O₂ vs. Airflow</h2>
-            <p>Calibrated initial O₂ against the initial airflow reading, coloured by material. Filled points sustained a flame; rings only flashed or did not ignite. Click any point to inspect the trial.</p>
+            <p>Calibrated initial O₂ against the initial airflow reading, coloured by material. Filled points sustained a flame; rings only flashed or did not ignite. Overlay delineates physical microgravity extinction regimes.</p>
           </div>
-          <button class="text-button" id="reset-map-filter" type="button" hidden>Show all materials</button>
+          <div class="chart-header-actions">
+            <button class="text-button" id="toggle-regimes" type="button" aria-pressed="true">Hide physical regimes</button>
+            <button class="text-button" id="reset-map-filter" type="button" hidden>Show all materials</button>
+          </div>
         </header>
         <div class="chart-legend" id="chart-legend" role="group" aria-label="Filter chart by material"></div>
         <div class="chart-stage" id="chart-stage">
@@ -91,7 +127,7 @@
         <div class="chart-footer mono">
           <span id="plotted-count">Plotting valid O₂ &amp; flow records…</span>
           <span class="outcome-key"><i class="key-filled"></i> Sustained <i class="key-ring"></i> Brief / none <i class="key-dashed"></i> Not documented</span>
-          <span>Dashed lines: 21% Earth O₂ · 18% Hypoxic threshold</span>
+          <span class="regime-key"><span class="key-rad"></span> Rad. Quenching (&lt;1.5 cm/s) <span class="key-hvac"></span> Cabin HVAC (2–8 cm/s) <span class="key-blow"></span> Blow-off (&gt;28 cm/s)</span>
         </div>
       </div>
 
@@ -105,6 +141,20 @@
         <ol class="hazard-list" id="hazard-list"></ol>
         <p class="ranking-note">Team heuristic, not a NASA flammability rating. Materials were tested under different conditions and sample sizes.</p>
       </aside>
+    </section>
+
+    <section id="timeline" class="panel timeline-section" aria-labelledby="timeline-title">
+      <header class="panel-heading">
+        <div>
+          <p class="eyebrow mono"><span aria-hidden="true"></span> HISTORICAL CONTINUUM</p>
+          <h2 id="timeline-title">Decades of NASA Microgravity Combustion</h2>
+          <p>From 1960s drop towers to the ISS and the Artemis program: how six decades of experimental fire science paved the way for human deep space exploration.</p>
+        </div>
+      </header>
+      <div class="timeline-body">
+        <div class="timeline-nav" id="timeline-nav" role="tablist" aria-label="Select historical era"></div>
+        <div class="timeline-card" id="timeline-card" role="tabpanel"></div>
+      </div>
     </section>
 
     <div class="workbench">

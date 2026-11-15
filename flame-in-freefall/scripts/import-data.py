@@ -64,8 +64,9 @@ def material_family(label, report_material):
         return "PMMA"
     if "wax" in text:
         return "Cera"
-    if "rod" in text:
-        return "Varilla sin polímero explícito"
+    if "rod" in text or "varilla" in text:
+        # BASS-II tests P1-P25 (Fernandez-Pello) and O1-O22 (Olson) used clear and black cast PMMA rods
+        return "Varilla PMMA"
     return "Otros"
 
 
