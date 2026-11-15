@@ -1,4 +1,4 @@
-import { findEvidence, loadIndex, reportLink } from "./evidence.js";
+import { airReading, findEvidence, isMissing, loadIndex, reportLink } from "./evidence.js";
 
 const byId = (id) => document.getElementById(id);
 const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({
@@ -24,12 +24,12 @@ let page = 1;
 let sort = 0;
 let requester;
 let pending = false;
-let showRegimes = true;
+let showExtinctionReference = false;
 
 function formatFamily(raw) {
   const map = {
     "Varilla PMMA": "PMMA (Cylindrical rods)",
-    "Varilla sin polímero explícito": "PMMA (Cylindrical rods)",
+    "Varilla sin polímero explícito": "Polymer rod (unspecified)",
     "PMMA": "PMMA (Films & slabs)",
     "Otros": "Other materials",
     "Cera": "Wax"
@@ -48,13 +48,7 @@ function formatDirection(raw) {
   return map[raw] || raw;
 }
 
-function parseNumeric(raw) {
-  if (raw == null) return null;
-  const str = String(raw).trim();
-  if (!str || /^(?:none|n\/?a|-+)$/i.test(str)) return null;
-  const match = str.match(/-?\d+(?:\.\d+)?/);
-  return match ? parseFloat(match[0]) : null;
-}
+const hasOxygen = (trial) => Number.isFinite(trial.initialO2) && trial.initialO2 >= 0 && trial.initialO2 <= 100;
 
 function citation(source, prefix = "NASA") {
   const label = source.table ? `${prefix} · ${source.table} · p. ${source.page}` : `${prefix} · p. ${source.page}`;
@@ -62,113 +56,28 @@ function citation(source, prefix = "NASA") {
 }
 
 function formatField(label, value) {
-  return `<div><dt>${label}</dt><dd>${escape(value || "No data")}</dd></div>`;
+  return `<div><dt>${label}</dt><dd>${escape(isMissing(value) ? "No data" : value)}</dd></div>`;
 }
 
-/* ==========================================================================
-   FLAMMABILITY MAP (OXYGEN VS. AIRFLOW BY MATERIAL) & HAZARD RANKING
-   ========================================================================== */
+const outcomeStatus = (value) => value === true ? "Yes" : value === false ? "No" : "Unknown";
+const proportion = new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 1 });
 
-// Outcome of a trial from the structured fields extracted from Appendix A (part B).
-// "brief" = a flash or a flame that only lived while the igniter was on.
-const BRIEF_FLAME = new Set(["transient_flame", "igniter_still_on", "igniter_removed"]);
-function outcomeOf(trial) {
-  if (trial.ignited === false) return "none";
-  if (trial.ignited === true) return BRIEF_FLAME.has(trial.extinction) ? "brief" : "sustained";
-  return "undocumented";
-}
-const OUTCOME_LABEL = {
-  sustained: "Sustained flame",
-  brief: "Brief flame only",
-  none: "Did not ignite",
-  undocumented: "Outcome not documented",
-};
-
-function computeMaterialStats() {
-  const groups = new Map();
-  for (const t of trials) {
-    const family = t.family || "Unknown";
-    if (!groups.has(family)) groups.set(family, []);
-    groups.get(family).push(t);
-  }
-
-  const stats = [];
-  for (const [family, list] of groups.entries()) {
-    const documented = list.filter((t) => outcomeOf(t) !== "undocumented");
-    const sustained = list.filter((t) => outcomeOf(t) === "sustained");
-    const sustainedO2 = sustained.map((t) => t.initialO2).filter((v) => v != null);
-    const flowValues = list.map((t) => parseNumeric(t.air)).filter((v) => v != null);
-
-    // Oxygen consumed during the test (excluding sensor glitches where final O2 drops below 10%)
-    const deltaO2List = list.map((t) => {
-      const init = parseNumeric(t.gasReadings?.[0]) ?? t.initialO2;
-      const fin = parseNumeric(t.gasReadings?.[1]);
-      if (init == null || fin == null || fin < 10 || fin > init) return null;
-      const delta = init - fin;
-      return delta <= 6 ? delta : null;
-    }).filter((v) => v != null);
-
-    // Lowest oxygen at which a flame was actually sustained (not merely the lowest level tested).
-    const minBurnO2 = sustainedO2.length ? Math.min(...sustainedO2) : null;
-    const sustainRate = documented.length ? sustained.length / documented.length : 0;
-    const avgDeltaO2 = deltaO2List.length ? deltaO2List.reduce((a, b) => a + b, 0) / deltaO2List.length : 0;
-
-    // Heuristic score (0-100), built only from documented outcomes:
-    // 1. Lowest O2 with a sustained flame: the lower, the riskier (up to 55 pts)
-    // 2. Share of documented trials with a sustained flame (up to 30 pts)
-    // 3. Mean oxygen consumed per test (up to 15 pts)
-    const o2Risk = minBurnO2 == null ? 0 : Math.max(0, Math.min(55, ((22.5 - minBurnO2) / 9.0) * 55));
-    const hazardScore = Math.round(o2Risk + sustainRate * 30 + Math.min(15, avgDeltaO2 * 14));
-
-    let tier = { label: "Low", className: "risk-low" };
-    if (hazardScore >= 72) tier = { label: "Critical", className: "risk-critical" };
-    else if (hazardScore >= 56) tier = { label: "High", className: "risk-high" };
-    else if (hazardScore >= 40) tier = { label: "Moderate", className: "risk-moderate" };
-
-    stats.push({
-      family,
-      label: formatFamily(family),
-      count: list.length,
-      documented: documented.length,
-      sustained: sustained.length,
-      minBurnO2,
-      minFlow: flowValues.length ? Math.min(...flowValues) : null,
-      maxFlow: flowValues.length ? Math.max(...flowValues) : null,
-      lowConfidence: documented.length < 5,
-      hazardScore,
-      tier
-    });
-  }
-
-  return stats.sort((a, b) => b.hazardScore - a.hazardScore || (a.minBurnO2 ?? 99) - (b.minBurnO2 ?? 99));
-}
-
-function renderHazardRanking(stats) {
-  const listEl = byId("hazard-list");
-  listEl.innerHTML = stats.map((item, idx) => {
-    const color = materialColors.get(item.family) || "#d6f682";
-    const o2Range = item.minBurnO2 != null ? `Sustained down to ${number.format(item.minBurnO2)}% O₂` : "No sustained flame";
-    const flowRange = (item.minFlow != null && item.maxFlow != null)
-      ? (item.minFlow === item.maxFlow ? `Flow: ${number.format(item.minFlow)} cm/s` : `Flow: ${number.format(item.minFlow)}–${number.format(item.maxFlow)} cm/s`)
-      : "Flow: —";
-    const evidence = `${item.sustained}/${item.documented} documented trials burned (${item.count} total)`;
-    const isActive = activeMapMaterial === item.family;
-
-    return `<li class="hazard-item">
-      <button type="button" class="hazard-btn ${isActive ? "active" : ""}" data-rank-material="${escape(item.family)}">
-        <span class="hazard-rank">#${idx + 1}</span>
-        <div class="hazard-info">
-          <strong><i class="legend-dot" style="background:${color}"></i>${escape(item.label)}</strong>
-          <div class="hazard-meta">
-            <span>${o2Range}</span>
-            <span>${flowRange}</span>
-            <span>${evidence}</span>
-            ${item.lowConfidence ? '<span class="low-confidence">Few trials · low confidence</span>' : ""}
-          </div>
-        </div>
-        <span class="risk-badge ${item.tier.className}">${item.tier.label} · ${item.hazardScore}</span>
-      </button>
-    </li>`;
+function renderOutcomes() {
+  const summarize = (records, field) => {
+    const counts = { Yes: 0, No: 0, Unknown: 0 };
+    for (const trial of records) counts[outcomeStatus(trial[field])]++;
+    return Object.entries(counts).map(([label, count]) =>
+      `<span>${label} <b>${count}/${records.length} (${proportion.format(count / records.length)})</b></span>`
+    ).join("");
+  };
+  const groups = [[null, trials], ...[...materialColors.keys()].map(
+    (family) => [family, trials.filter((trial) => trial.family === family)]
+  )];
+  byId("outcome-rows").innerHTML = groups.map(([family, records]) => {
+    const label = family === null ? "All materials" : formatFamily(family);
+    return `<tr><th scope="row"><button type="button" class="trial-link" data-outcome-material="${escape(family ?? "")}"
+      aria-pressed="${(family ?? "") === activeMapMaterial}">${escape(label)}</button></th>
+      <td>${summarize(records, "ignited")}</td><td>${summarize(records, "spread")}</td></tr>`;
   }).join("");
 }
 
@@ -178,7 +87,7 @@ function renderLegend(families) {
     const color = materialColors.get(family);
     const active = activeMapMaterial === family;
     const dimmed = activeMapMaterial && !active;
-    return `<button type="button" class="legend-pill ${active ? "active" : ""} ${dimmed ? "dimmed" : ""}" data-map-material="${escape(family)}">
+    return `<button type="button" class="legend-pill ${active ? "active" : ""} ${dimmed ? "dimmed" : ""}" aria-pressed="${active}" data-map-material="${escape(family)}">
       <span class="legend-dot" style="background:${color}"></span>
       <span>${escape(formatFamily(family))}</span>
     </button>`;
@@ -189,31 +98,34 @@ function renderLegend(families) {
 function renderFlammabilityMap() {
   const svg = byId("flam-svg");
   const tooltip = byId("chart-tooltip");
-  const points = trials
-    .map((t) => ({ trial: t, o2: t.initialO2, flow: parseNumeric(t.air) }))
-    .filter((d) => d.o2 != null && d.flow != null);
-
-  byId("plotted-count").textContent = `${points.length} of ${trials.length} trials plotted (numeric O₂ & airflow)`;
+  const subset = activeMapMaterial ? trials.filter((trial) => trial.family === activeMapMaterial) : trials;
+  const points = [];
+  const excluded = { "Multiple / annotated": 0, Missing: 0, Oxygen: 0 };
+  for (const trial of subset) {
+    const air = airReading(trial.air);
+    if (air.value === null) excluded[air.status]++;
+    else if (!hasOxygen(trial)) excluded.Oxygen++;
+    else points.push({ trial, o2: trial.initialO2, flow: air.value });
+  }
+  byId("plotted-count").textContent = `${points.length}/${subset.length} trials plotted`;
+  byId("map-exclusions").textContent = `Excluded · ${excluded["Multiple / annotated"]} multiple/annotated air · ${excluded.Missing} missing air · ${excluded.Oxygen} missing/invalid O₂ with single air`;
 
   const W = 760, H = 400;
-  const pad = { top: 22, right: 26, bottom: 52, left: 62 };
+  const pad = { top: 22, right: 33, bottom: 52, left: 62 };
   const plotW = W - pad.left - pad.right;
   const plotH = H - pad.top - pad.bottom;
 
-  const maxFlowRaw = points.length ? Math.max(...points.map((p) => p.flow)) : 50;
-  const minFlowRaw = points.length ? Math.min(0, ...points.map((p) => p.flow)) : 0;
-  const xMin = Math.floor(minFlowRaw);
-  const xMax = Math.ceil((maxFlowRaw + 2) / 5) * 5;
+  const xMin = 0;
+  const xMax = Math.max(5, Math.ceil(Math.max(0, ...points.map((p) => p.flow)) / 5) * 5);
+  const yMin = Math.min(12, ...points.map((p) => p.o2));
+  const yMax = Math.max(24, ...points.map((p) => p.o2));
 
-  // The axis reaches 32% so the planned lunar habitat atmosphere (≥30% O₂) is visible next to the data.
-  const yMin = 12;
-  const yMax = 32;
-
-  const xScale = (v) => pad.left + ((v - xMin) / Math.max(1, xMax - xMin)) * plotW;
+  const xScale = (v) => pad.left + ((v - xMin) / (xMax - xMin)) * plotW;
   const yScale = (v) => pad.top + plotH - ((v - yMin) / (yMax - yMin)) * plotH;
 
-  const yTicks = [12, 16, 20, 24, 28, 32];
-  const xStep = xMax <= 25 ? 5 : xMax <= 60 ? 10 : 15;
+  const yTicks = [];
+  for (let v = Math.ceil(yMin / 2) * 2; v <= yMax; v += 2) yTicks.push(v);
+  const xStep = xMax <= 25 ? 5 : 10;
   const xTicks = [];
   for (let v = xMin; v <= xMax; v += xStep) xTicks.push(v);
 
@@ -231,66 +143,28 @@ function renderFlammabilityMap() {
     markup += `<text class="chart-axis-label" x="${x}" y="${pad.top + plotH + 20}" text-anchor="middle">${xVal}</text>`;
   }
 
-  const tested = points.map((p) => p.o2);
-  const testedTop = tested.length ? Math.max(...tested) : 22.2;
-  const gapTop = yScale(yMax);
-  markup += `<rect class="chart-gap" x="${pad.left}" y="${yScale(30)}" width="${plotW}" height="${yScale(testedTop) - yScale(30)}" />`;
-  markup += `<rect class="chart-lunar" x="${pad.left}" y="${gapTop}" width="${plotW}" height="${yScale(30) - gapTop}" />`;
-  markup += `<text class="chart-lunar-label" x="${pad.left + 12}" y="${gapTop + 20}">PLANNED LUNAR HABITAT · ≥30% O₂ AT ≤10.2 PSI · NO BASS-II DATA</text>`;
-  markup += `<text class="chart-gap-label" x="${pad.left + 12}" y="${(yScale(30) + yScale(testedTop)) / 2 + 4}">UNTESTED ABOVE ${number.format(testedTop)}% O₂</text>`;
+  markup += `<text class="chart-axis-title" x="${pad.left + plotW / 2}" y="${H - 10}" text-anchor="middle">Air display · single reading (cm/s)</text>`;
+  markup += `<text class="chart-axis-title" transform="rotate(-90)" x="${-(pad.top + plotH / 2)}" y="18" text-anchor="middle">Initial calibrated O₂ (%)</text>`;
 
-  if (showRegimes) {
-    // 1. Cabin HVAC airflow envelope (2 to 8 cm/s)
-    const hvacX1 = xScale(2.0);
-    const hvacX2 = xScale(8.0);
-    const hvacTop = yScale(testedTop);
-    const hvacHeight = (pad.top + plotH) - hvacTop;
-    markup += `<rect class="chart-regime-hvac" x="${hvacX1}" y="${hvacTop}" width="${hvacX2 - hvacX1}" height="${hvacHeight}" />`;
-    markup += `<text class="chart-regime-label" x="${(hvacX1 + hvacX2) / 2}" y="${hvacTop + 14}" text-anchor="middle">CABIN HVAC (2–8 cm/s)</text>`;
-
-    // 2. Radiation Quenching Boundary (< 1.5 cm/s, low flow extinction)
-    const radX2 = xScale(1.5);
-    const radTop = yScale(19.0);
-    const radHeight = (pad.top + plotH) - radTop;
-    markup += `<rect class="chart-regime-radiation" x="${pad.left}" y="${radTop}" width="${radX2 - pad.left}" height="${radHeight}" />`;
-    markup += `<text class="chart-regime-label" x="${(pad.left + radX2) / 2}" y="${radTop + 14}" text-anchor="middle">RAD. QUENCH</text>`;
-
-    // 3. Convective Blow-Off Boundary (> 28 cm/s)
-    const blowX1 = xScale(28.0);
-    const blowWidth = (W - pad.right) - blowX1;
-    if (blowWidth > 0) {
-      markup += `<rect class="chart-regime-blowoff" x="${blowX1}" y="${hvacTop}" width="${blowWidth}" height="${hvacHeight}" />`;
-      markup += `<text class="chart-regime-label" x="${blowX1 + 8}" y="${hvacTop + 14}" text-anchor="start">BLOW-OFF (&gt;28 cm/s)</text>`;
+  if (showExtinctionReference) {
+    // NASA/TM-20210011385, Table 2.1. Convert the reported mm/s to cm/s.
+    for (const [o2, flow, uncertainty] of [[21, 1, 0.5], [16, 3, 0.5]]) {
+      const y = yScale(o2);
+      const start = xScale(flow - uncertainty);
+      const center = xScale(flow);
+      const end = xScale(flow + uncertainty);
+      markup += `<path class="chart-extinction-reference"
+        d="M ${start} ${y} H ${end} M ${start} ${y-5} v 10 M ${end} ${y-5} v 10 M ${center} ${y-8} v 16" />`;
     }
   }
 
-  for (const ref of [{ val: 21, label: "21% Earth O₂" }, { val: 18, label: "18% Threshold" }]) {
-    const y = yScale(ref.val);
-    markup += `<line class="chart-ref-line" x1="${pad.left}" y1="${y}" x2="${W - pad.right}" y2="${y}" />`;
-    markup += `<text class="chart-axis-label" x="${W - pad.right - 4}" y="${y - 5}" text-anchor="end">${ref.label}</text>`;
-  }
-
-  markup += `<text class="chart-axis-title" x="${pad.left + plotW / 2}" y="${H - 10}" text-anchor="middle">Initial airflow reading (cm/s)</text>`;
-  markup += `<text class="chart-axis-title" transform="rotate(-90)" x="${-(pad.top + plotH / 2)}" y="18" text-anchor="middle">Initial O₂ (%)</text>`;
-
-  const orderedPoints = [...points].sort((a, b) => {
-    const aAct = a.trial.family === activeMapMaterial ? 1 : 0;
-    const bAct = b.trial.family === activeMapMaterial ? 1 : 0;
-    return aAct - bAct;
-  });
-
-  for (const { trial, o2, flow } of orderedPoints) {
-    const cx = xScale(flow);
-    const cy = yScale(o2);
-    const color = materialColors.get(trial.family) || "#d6f682";
-    const familyLabel = formatFamily(trial.family);
-    const isDimmed = activeMapMaterial && trial.family !== activeMapMaterial;
-    const r = isDimmed ? 4.2 : 6;
-    const opacity = isDimmed ? 0.22 : 0.92;
-    const outcome = outcomeOf(trial);
-    // Filled = sustained flame; ring = brief flame or no ignition; dashed ring = outcome not documented.
-    const fill = outcome === "sustained" ? color : "transparent";
-    markup += `<circle class="chart-point outcome-${outcome}" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r}" fill="${fill}" stroke="${color}" fill-opacity="${opacity}" stroke-opacity="${opacity}" tabindex="0" data-point-id="${escape(trial.id)}" aria-label="Trial ${escape(trial.id)}: ${escape(familyLabel)}, ${o2}% O2, ${flow} cm/s, ${OUTCOME_LABEL[outcome]}" />`;
+  for (const { trial, o2, flow } of points) {
+    const color = materialColors.get(trial.family);
+    const outcome = outcomeStatus(trial.ignited).toLowerCase();
+    const fill = outcome === "yes" ? color : "transparent";
+    const label = `Trial ${trial.id}, ${formatFamily(trial.family)}, ${o2}% O₂, ${flow} cm/s, ignition ${outcome}`;
+    markup += `<circle class="chart-point outcome-${outcome}" cx="${xScale(flow).toFixed(1)}" cy="${yScale(o2).toFixed(1)}" r="6"
+      fill="${fill}" stroke="${color}" tabindex="0" role="button" data-point-id="${escape(trial.id)}" aria-label="${escape(label)}" />`;
   }
 
   svg.innerHTML = markup;
@@ -303,7 +177,7 @@ function renderFlammabilityMap() {
       <span>${escape(trial.material)}</span>
       <span>O₂: ${oxygen(trial.initialO2)} · Flow: ${escape(trial.air || "—")}</span>
       <span>Direction: ${escape(formatDirection(trial.report?.direction))}</span>
-      <span>Outcome: ${OUTCOME_LABEL[outcomeOf(trial)]}</span>
+      <span>Ignited: ${outcomeStatus(trial.ignited)} · Spread: ${outcomeStatus(trial.spread)}</span>
     `;
     tooltip.hidden = false;
     const stageRect = byId("chart-stage").getBoundingClientRect();
@@ -320,11 +194,20 @@ function renderFlammabilityMap() {
     else tooltip.hidden = true;
   };
   svg.onmouseleave = () => { tooltip.hidden = true; };
-  svg.onclick = (event) => {
+  svg.onfocusin = (event) => showTip(event.target);
+  svg.onfocusout = () => { tooltip.hidden = true; };
+  const openPoint = (event) => {
     const circle = event.target.closest(".chart-point");
     if (!circle) return;
     const trial = trials.find((t) => t.id === circle.dataset.pointId);
     if (trial) showTrial(trial, circle);
+  };
+  svg.onclick = openPoint;
+  svg.onkeydown = (event) => {
+    if (event.target.matches(".chart-point") && (event.key === "Enter" || event.key === " ")) {
+      event.preventDefault();
+      openPoint(event);
+    }
   };
 }
 
@@ -332,7 +215,7 @@ function setMapMaterialFilter(family, syncTable = false) {
   activeMapMaterial = activeMapMaterial === family ? "" : family;
   renderLegend([...materialColors.keys()]);
   renderFlammabilityMap();
-  renderHazardRanking(computeMaterialStats());
+  renderOutcomes();
 
   if (syncTable) {
     byId("material").value = activeMapMaterial;
@@ -390,6 +273,7 @@ function renderTable() {
     <td>${trial.video ? `<button class="play-small" aria-label="Watch video ${escape(trial.id)}" type="button" data-video="${escape(trial.id)}">▶</button>` : ""}</td>
   </tr>`);
   byId("trial-rows").innerHTML = rows.join("") || '<tr><td colspan="6" class="empty">No trials match the current filters.</td></tr>';
+  byId("export-filtered").disabled = filtered.length === 0;
   byId("result-count").textContent = `${filtered.length} of ${trials.length} records`;
   byId("page-label").textContent = filtered.length ? `${start + 1}–${Math.min(start + PAGE_SIZE, filtered.length)} of ${filtered.length}` : "0 records";
   byId("prev").disabled = page <= 1;
@@ -463,8 +347,7 @@ function showVideo(trial, trigger) {
 }
 
 const observation = (trial) => trial.report?.observation || "No linked observation found in Appendix A.";
-const undocumented = "Unconfirmed";
-const yesNo = (value) => value === true ? "Yes" : value === false ? "No" : undocumented;
+const undocumented = "Unknown";
 const extinctionLabels = new Map(Object.entries({
   flow_cutoff: "Airflow cut off",
   flow_reduced: "Airflow reduced",
@@ -479,12 +362,12 @@ const extinctionLabels = new Map(Object.entries({
   not_applicable: "Not applicable (did not ignite)",
 }));
 const outcomeFields = [
-  ["Ignited", (trial) => yesNo(trial.ignited)],
-  ["Spread", (trial) => yesNo(trial.spread)],
+  ["Ignited", (trial) => outcomeStatus(trial.ignited)],
+  ["Spread", (trial) => outcomeStatus(trial.spread)],
   ["Extinction", (trial) => extinctionLabels.get(trial.extinction) ?? undocumented],
 ];
 const gasNames = ["Initial calibrated O₂ (%)", "Final calibrated O₂ (%)", "Initial CO₂ (%)", "Final CO₂ (%)", "Initial CO (ppm)", "Final CO (ppm)"];
-const gasValue = (trial, index) => /^(?:none|n\/?a|-*)$/i.test(trial.gasReadings[index]) ? "No data" : trial.gasReadings[index];
+const gasValue = (trial, index) => trial.gasReadings?.[index];
 
 function showTrial(trial, trigger) {
   showModal(`Trial ${trial.id} · Sample ${trial.sample}`, `
@@ -497,6 +380,8 @@ function showTrial(trial, trigger) {
       ${formatField("Material family", formatFamily(trial.family))}
       ${formatField("Flow direction", formatDirection(trial.report?.direction))}
       ${formatField("Air display · original", trial.air)}
+      ${formatField("Air reading type", airReading(trial.air).status)}
+      ${formatField("Flow restrictor · original", trial.restrictor)}
       ${formatField("Fan display · original", trial.fan)}
       ${gasNames.map((name, index) => formatField(name, gasValue(trial, index))).join("")}
     </dl>
@@ -507,84 +392,77 @@ function showTrial(trial, trigger) {
     </div>`, trigger);
 }
 
-function generateSIComparison(records) {
-  if (!records || records.length < 2) return null;
-  const ids = records.map((r) => r.id).join(", ");
-  const families = [...new Set(records.map((r) => formatFamily(r.family)))];
-  const flows = records.map((r) => ({ id: r.id, val: parseNumeric(r.air), raw: r.air }));
-  const o2s = records.map((r) => ({ id: r.id, val: r.initialO2 }));
-  const hasNomex = records.some((r) => (r.family || "").toLowerCase().includes("nomex"));
-  const hasPMMA = records.some((r) => (r.family || "").toLowerCase().includes("pmma"));
+const comparisonRecords = () => [...selected].map((id) => trials.find((trial) => trial.id === id));
+const gasFields = gasNames.map((name, index) => [name, (trial) => gasValue(trial, index)]);
+const conditionFields = [
+  ["Material", (trial) => trial.material],
+  ["Family", (trial) => formatFamily(trial.family)],
+  ["Sample", (trial) => trial.sample],
+  ["Flow direction", (trial) => trial.report?.direction ? formatDirection(trial.report.direction) : null],
+  ["Air display · original", (trial) => trial.air],
+  ["Air reading type", (trial) => airReading(trial.air).status],
+  ["Fan display · original", (trial) => trial.fan],
+  ["Flow restrictor · original", (trial) => trial.restrictor],
+  gasFields[0],
+];
 
-  let analysis = "";
-  let flightRule = "";
-
-  if (hasNomex && hasPMMA) {
-    const nomex = records.find((r) => (r.family || "").toLowerCase().includes("nomex"));
-    const pmma = records.find((r) => (r.family || "").toLowerCase().includes("pmma"));
-    analysis = `Contrasting flame-retardant Nomex (${nomex.id}) with combustible PMMA (${pmma.id}). Nomex demonstrated zero sustained flame spread in microgravity (${extinctionLabels.get(nomex.extinction) || "self-extinguished"}), while PMMA supported sustained flame propagation with active oxygen consumption and soot production.`;
-    flightRule = "Nomex remains the gold-standard protective barrier for crew flight suits and cargo packaging. Flammable clear PMMA acrylics must be shielded or isolated from forced airflow.";
-  } else if (families.length === 1 && families[0].includes("PMMA")) {
-    const thin = records.find((r) => (r.material || "").includes("micron") || (r.material || "").includes("film"));
-    const thick = records.find((r) => (r.material || "").includes("rod") || (r.material || "").includes("slab") || (r.material || "").includes("mm"));
-    if (thin && thick) {
-      analysis = `Geometric comparison: thin film PMMA (${thin.id}) vs thick PMMA (${thick.id}). Thin films (100–400 µm) heat through rapidly, sustaining flame spread at low velocities and extinguishing almost instantly upon flow cutoff. Thick rods/slabs possess high thermal inertia, leading to delayed ignition, intense pyrolytic vapor jetting, and longer extinction latency.`;
-      flightRule = "Emergency HVAC shutdown halts opposed flame spread on thin polymers within seconds. Thick structural plastics sustain pyrolytic off-gassing and require nitrogen flooding or clean agent suppression.";
-    } else {
-      const f1 = flows[0], f2 = flows[1];
-      if (f1.val != null && f2.val != null && f1.val !== f2.val) {
-        const [fast, slow] = f1.val > f2.val ? [f1, f2] : [f2, f1];
-        analysis = `Airflow sensitivity: ${fast.id} at ${fast.val} cm/s vs ${slow.id} at ${slow.val} cm/s. Higher airflow (5 cm/s) accelerates oxidizer supply to the flame zone, producing soot with a blue leading edge. Reducing airflow (to 2 cm/s) narrows the flame and shifts it to a cooler, primarily blue appearance.`;
-        flightRule = "Spacecraft ventilation ducts (2–8 cm/s) fall inside the peak flammability corridor. Immediate duct isolation eliminates the forced oxidizer draft without inducing blow-off turbulence.";
-      } else {
-        analysis = `Comparing PMMA trials ${ids} under matching airflow conditions (${flows[0].raw || "varied"} cm/s). Oxygen concentrations span ${Math.min(...o2s.map((x) => x.val || 21))}% to ${Math.max(...o2s.map((x) => x.val || 21))}%. Observed outcomes: ${records.map((r) => `${r.id} (${OUTCOME_LABEL[outcomeOf(r)]})`).join(", ")}.`;
-        flightRule = "PMMA sustains microgravity combustion down to 13.5% O₂, proving that materials can remain hazardous in low gravity below their standard 1g upward flammability rating (15.4%).";
-      }
-    }
-  } else {
-    const o2Min = Math.min(...o2s.map((x) => x.val || 21));
-    const o2Max = Math.max(...o2s.map((x) => x.val || 21));
-    const sustainedList = records.filter((r) => outcomeOf(r) === "sustained").map((r) => r.id);
-    analysis = `Cross-material comparison: ${ids} (${families.join(" vs ")}) tested at ${o2Min}%–${o2Max}% initial O₂. ${sustainedList.length ? `Active flame spread sustained in: ${sustainedList.join(", ")}.` : "No sustained flame spread documented in selected trials."}`;
-    flightRule = "Microgravity flammability is dictated by material thermophysical properties and low-speed flow velocity. In the absence of natural buoyant convection, material chemistry and geometry control fire spread.";
-  }
-
-  return { ids, families, analysis, flightRule };
+function comparisonRow(label, getter, records, condition) {
+  const values = records.map(getter);
+  const known = values.filter((value) => !isMissing(value));
+  const differs = condition && new Set(known.map((value) => normalize(String(value)))).size > 1;
+  const badge = differs ? '<span class="comparison-difference">Differs</span>' : "";
+  const cells = values.map((value) => isMissing(value)
+    ? '<td class="muted">No data</td>' : `<td>${escape(value)}</td>`).join("");
+  return `<tr><th scope="row">${label}${badge}</th>${cells}</tr>`;
 }
 
 function compare(trigger) {
-  const records = Array.from(selected, (id) => trials.find((trial) => trial.id === id));
-  const siInsight = generateSIComparison(records);
-  const fields = [
-    ["Material", (trial) => trial.material],
-    ["Family", (trial) => formatFamily(trial.family)],
-    ["Sample", (trial) => trial.sample],
-    ...outcomeFields,
-    ["Flow direction", (trial) => formatDirection(trial.report?.direction)],
-    ["Air display · original", (trial) => trial.air || "No data"],
-    ...gasNames.map((name, index) => [name, (trial) => gasValue(trial, index)]),
-    ["Report observation", observation],
-  ];
+  const records = comparisonRecords();
+  const rows = (fields, condition) => fields.map(([label, getter]) =>
+    comparisonRow(label, getter, records, condition)).join("");
+  const summary = ["Yes", "No", "Unknown"].map((status) => {
+    const count = records.filter((trial) => outcomeStatus(trial.spread) === status).length;
+    return `${status} ${count}/${records.length}`;
+  }).join(" · ");
   showModal("Compare Trials", `
-    ${siInsight ? `
-    <div class="si-compare-card">
-      <div class="si-compare-head">
-        <span class="si-badge"><i aria-hidden="true">✳</i> Super Intelligence (SI) Comparative Synthesis</span>
-        <span class="mono muted">${escape(siInsight.ids)} · ${escape(siInsight.families.join(" vs "))}</span>
-      </div>
-      <p class="si-compare-text">${escape(siInsight.analysis)}</p>
-      <div class="si-compare-takeaway">
-        <strong class="mono">MISSION FLIGHT RULE TAKEAWAY:</strong>
-        <p>${escape(siInsight.flightRule)}</p>
-      </div>
-    </div>` : ""}
+    <div class="comparison-summary"><strong>Recorded flame spread</strong><p>${summary}</p></div>
+    <p class="modal-note">Differences mark distinct recorded conditions. Air entries preserve sequences, settings and notes.</p>
     <div class="table-scroll" role="region" aria-label="Trial comparison" tabindex="0">
       <table class="compare-table">
-        <thead><tr><th scope="col">Variable</th>${records.map((trial) => `<th scope="col">${trial.id}</th>`).join("")}</tr></thead>
-        <tbody>${fields.map(([label, getter]) => `<tr><th scope="row">${label}</th>${records.map((trial) => `<td>${escape(getter(trial))}</td>`).join("")}</tr>`).join("")}
-        <tr><th scope="row">Source</th>${records.map((trial) => `<td>${trial.report ? citation(trial.report) : "No appendix link"}</td>`).join("")}</tr></tbody>
+        <thead><tr><th scope="col">Variable</th>${records.map((trial) => `<th scope="col">${escape(trial.id)}</th>`).join("")}</tr></thead>
+        <tbody>${rows(conditionFields, true)}
+        ${rows([...outcomeFields, ...gasFields.slice(1), ["Report observation", (trial) => trial.report?.observation]])}
+        <tr><th scope="row">Source</th>${records.map((trial) =>
+          `<td>${trial.report ? citation(trial.report) : '<span class="muted">No appendix link</span>'}</td>`).join("")}</tr></tbody>
       </table>
-    </div><p class="modal-note">Readings are displayed as recorded in the PSI dataset and include values pending verification.</p>`, trigger);
+    </div>
+    <div class="detail-actions"><button class="primary" id="export-comparison" type="button">Download comparison CSV</button></div>`, trigger);
+}
+
+function csvCell(value) {
+  const raw = String(value ?? "");
+  const formula = /^[\s\p{Cc}]*[=+@-]/u.test(raw) && !/^-?\d+(?:\.\d+)?$/.test(raw);
+  return `"${formula ? "'" : ""}${raw.replaceAll('"', '""')}"`;
+}
+
+function downloadCsv(records, filename) {
+  const fields = [
+    ["Trial", (trial) => trial.id], ...conditionFields, ...outcomeFields, ...gasFields.slice(1),
+    ["PI", (trial) => trial.pi], ["Date", (trial) => trial.date], ["GMT day", (trial) => trial.gmt],
+    ["Air single reading (cm/s)", (trial) => airReading(trial.air).value],
+    ["PSI CSV line", (trial) => trial.csvLine],
+    ["NASA table", (trial) => trial.report?.table], ["NASA printed page", (trial) => trial.report?.page],
+    ["NASA source", (trial) => trial.report ? reportLink(trial.report) : ""],
+    ["Report observation", (trial) => trial.report?.observation],
+  ];
+  const rows = [fields.map(([label]) => label), ...records.map((trial) => fields.map(([, getter]) => getter(trial)))];
+  const url = URL.createObjectURL(new Blob(["\uFEFF", rows.map((row) => row.map(csvCell).join(",")).join("\r\n"), "\r\n"],
+    { type: "text/csv;charset=utf-8" }));
+  const download = document.createElement("a");
+  download.href = url;
+  download.download = filename;
+  download.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function displayAnswer(result) {
@@ -634,125 +512,103 @@ async function ask() {
 
 const EXPLORATION_ENVIRONMENTS = {
   iss: {
-    id: "iss",
-    name: "ISS & LEO Transit (Microgravity)",
-    badge: "Microgravity · 0g",
-    gravity: "0g (0 m/s²)",
-    pressure: "101.3 kPa · 14.7 psia",
-    oxygen: "21.0% O₂ by volume",
-    o2Partial: "21.3 kPa PO₂",
-    convection: "Zero buoyancy (Quiescent / Forced HVAC only)",
-    flammabilityIndex: "1.0x (Standard baseline)",
-    flammabilityClass: "risk-moderate",
-    flammabilityPercent: 45,
-    physics: "Without gravity-driven buoyant rise, heat and chemical products diffuse spherically around the flame. Natural convection is absent. Burning is entirely dependent on forced cabin ventilation airflow (2–8 cm/s) or astronaut motion.",
-    gapNotice: "Covered by BASS-II dataset (129 trials in 13.6%–22.2% O₂ at ISS cabin pressure).",
-    flightRule: "Flight Rule 1 · Immediate HVAC Shutdown: Halting cabin airflow cuts off the forced oxidizer draft and forces radiation quenching or oxygen starvation within seconds (proven in trial B1). CO/CO₂ scrubbers must activate immediately due to elevated toxic gas yields.",
-    relevance: "Validates fire isolation procedures for Orion transit, commercial space stations, and lunar transit vehicles."
+    name: "ISS & LEO Transit",
+    badge: "Microgravity",
+    pressure: "101.3 kPa · 14.7 psia (nominal ISS)",
+    oxygen: "21% O₂ (nominal ISS)",
+    scope: "BASS-II tested small samples under controlled airflow in the ISS Microgravity Science Glovebox, with initial oxygen varied between trials.",
+    evidence: "In B1, a 100 µm PMMA film flame extinguished quickly after airflow was cut when it had spread about halfway along the sample.",
+    url: reportLink({ pdfPage: 111 }),
+    source: "NASA BASS-II, Table A.1, p. 103",
   },
   lunar: {
-    id: "lunar",
-    name: "Artemis Gateway & Lunar Habitat",
-    badge: "Partial Gravity · 1/6g",
-    gravity: "0.166g (1.62 m/s²)",
-    pressure: "56.5 kPa · 8.2 psia (Exploration Atmosphere)",
-    oxygen: "34.0% O₂ (Enriched Exploration Standard)",
-    o2Partial: "19.2 kPa PO₂",
-    convection: "Weak partial buoyancy (~16% of Earth buoyant draft)",
-    flammabilityIndex: "1.85x (High Flammability Hazard)",
-    flammabilityClass: "risk-critical",
-    flammabilityPercent: 88,
-    physics: "Partial lunar gravity creates weak natural convective currents that are insufficient to blow out or cool the flame, but enough to establish persistent upward flame orientation. Crucially, the 34% O₂ mole fraction significantly lowers ignition delay and enhances burning rates, vastly outweighing the mitigating effect of lower total pressure.",
-    gapNotice: "The Lunar Gap: Untested in BASS-II (max 22.2% O₂). Addressed by NASA's follow-on SoFIE experiments on the ISS.",
-    flightRule: "Flight Rule 2 · Stricter Material Screening: Materials with marginal pass ratings in standard Earth 1g 21% O₂ tests (NASA-STD-6001 Test 1) can burn vigorously in 34% O₂ lunar atmospheres. Depressurization or active clean-agent flooding is required.",
-    relevance: "Directly governs material flammability certification for Artemis Gateway modules and Lunar Base Camp."
+    name: "Lunar Habitat",
+    badge: "Partial gravity · about 1/6g",
+    pressure: "56.5 kPa · 8.2 psia (reference)",
+    oxygen: "34% O₂ (reference)",
+    scope: "NASA studied this reference atmosphere for exploration habitat and EVA planning. BASS-II measured combustion in ISS microgravity.",
+    evidence: "The BASS-II PMMA comparison used the ISS and a downward terrestrial configuration. Lunar flame spread remains outside that comparison.",
+    url: reportLink({ pdfPage: 48 }),
+    source: "NASA BASS-II, §2.3.7, p. 40",
+    atmosphereUrl: "https://ntrs.nasa.gov/citations/20240003211",
   },
   mars: {
-    id: "mars",
     name: "Mars Surface Habitat",
-    badge: "Partial Gravity · 3/8g",
-    gravity: "0.38g (3.71 m/s²)",
-    pressure: "70.3 kPa · 10.2 psia",
-    oxygen: "28.0% O₂ (Moderate Enrichment)",
-    o2Partial: "19.7 kPa PO₂",
-    convection: "Moderate buoyant draft (~62% of Earth buoyant draft)",
-    flammabilityIndex: "1.45x (Elevated Hazard)",
-    flammabilityClass: "risk-high",
-    flammabilityPercent: 68,
-    physics: "3/8g creates significant natural buoyant draft, forming upward-pointing convective flame plumes and established ceiling smoke layers. Flammability behavior approaches terrestrial trends, but 28% O₂ keeps combustion kinetics elevated.",
-    gapNotice: "Extrapolation gap: Partial gravity combined with 28% O₂ requires empirical modeling from parabolic flight and SoFIE.",
-    flightRule: "Flight Rule 3 · Dual-Layer Detection: Optical smoke detectors in habitat ceilings detect rising convective plumes, while floor-level electrochemical CO/CO₂ monitors detect heavy toxic combustion products. Venting habitat atmosphere to Martian ambient is viable as secondary suppression.",
-    relevance: "Defines habitability and environmental control requirements for Mars surface crew habitats."
+    badge: "Partial gravity · about 0.38g",
+    pressure: "Depends on habitat design",
+    oxygen: "Depends on habitat design",
+    scope: "Mars surface gravity differs from the conditions of the ISS experiments. Habitat pressure and oxygen depend on the vehicle design.",
+    evidence: "The BASS-II dataset leaves flame spread at martian gravity and fire behavior in a Mars habitat unresolved.",
+    url: "https://science.nasa.gov/biological-physical/investigations/sofie/",
+    source: "NASA SoFIE research objectives",
   },
   eva: {
-    id: "eva",
-    name: "Exploration EVA Spacesuit",
-    badge: "0g to 1/6g · 100% O₂",
-    gravity: "0g to 0.166g",
-    pressure: "29.6 kPa · 4.3 psia",
-    oxygen: "100.0% Pure O₂",
-    o2Partial: "29.6 kPa PO₂ (Hyperoxic)",
-    convection: "Forced breathing loop draft",
-    flammabilityIndex: "3.20x (Extreme Hazard)",
-    flammabilityClass: "risk-critical",
-    flammabilityPercent: 100,
-    physics: "Pure oxygen atmospheres exhibit extreme chemical reactivity. Polymers that self-extinguish in air burn explosively in 100% O₂. Any micro-electrical spark, rapid compression, or friction event provides sufficient ignition energy.",
-    gapNotice: "Out-of-bounds for BASS-II. Tested strictly in dedicated hyperoxic chambers under NASA-STD-6001.",
-    flightRule: "Flight Rule 4 · Zero Combustible Tolerance: Zero exposed combustible polymers permitted in suit cabin or life-support loop. Exclusively certified non-flammable polymers (fluoropolymers, treated Beta cloth, Nomex/Kevlar composites) are flight-authorized.",
-    relevance: "Certifies the exploration extravehicular mobility unit (xEMU) for lunar and Martian spacewalks."
-  }
+    name: "Exploration EVA Suit",
+    badge: "Suit atmosphere",
+    pressure: "29.6 kPa · 4.3 psia (reference)",
+    oxygen: "Depends on suit design",
+    scope: "NASA used 4.3 psia as a reference suit pressure in exploration prebreathe research.",
+    evidence: "BASS-II measured small samples in the ISS glovebox. Suit-loop airflow, pressure and oxygen require separate evidence.",
+    url: "https://ntrs.nasa.gov/citations/20220009546",
+    source: "NASA exploration prebreathe study",
+  },
 };
 
 const NASA_DECADAL_ERAS = [
   {
     id: "drop",
+    source: "https://www.nasa.gov/centers-and-facilities/glenn/zero-gravity-research-facility/",
     decade: "1960s–1980s",
     title: "The Drop Tower Era",
     facility: "NASA Glenn 2.2s & 5.18s Facilities",
     icon: "⏱",
-    discovery: "First proof that flames become spherical without buoyant rise.",
-    narrative: "Using the 145-meter vacuum drop tower at NASA Glenn Research Center, researchers achieved up to 5.18 seconds of true microgravity. They proved that without buoyant convection, upward flame flickers vanish, combustion becomes diffusion-controlled, and soot accumulates inside a spherical flame front.",
+    discovery: "Short-duration microgravity experiments on the ground.",
+    narrative: "NASA Glenn’s vacuum drop tower provides 5.18 seconds of near weightlessness for research, including combustion studies.",
     legacy: "Laid the theoretical foundation for microgravity diffusion flames and zero-g droplet combustion."
   },
   {
     id: "shuttle",
+    source: "https://ntrs.nasa.gov/citations/19990019803",
     decade: "1990s",
     title: "Space Shuttle & Spacelab Missions",
-    facility: "STS-83, STS-94, STS-107",
+    facility: "STS-83 and STS-94",
     icon: "🚀",
-    discovery: "Discovery of ultra-lean 'flame balls' burning for 500 seconds (SOFBALL).",
-    narrative: "Spacelab missions carried combustion chambers in the Shuttle cargo bay. The SOFBALL experiment revealed stationary spherical flames burning with as little as 1 to 50 milliwatts of chemical power for hundreds of seconds—conditions impossible to observe in Earth gravity.",
+    discovery: "SOFBALL studied spherical flames in lean gas mixtures.",
+    narrative: "Spacelab missions carried combustion chambers in the Shuttle cargo bay. SOFBALL used the Shuttle to observe low-power spherical flames in microgravity.",
     legacy: "Proved that lean flammability limits extend significantly in low gravity."
   },
   {
     id: "iss",
+    source: "https://www.nasa.gov/missions/station/studying-combustion-and-fire-safety/",
     decade: "2008–2020",
     title: "The ISS Combustion Era (BASS & BASS-II)",
     facility: "Combustion Integrated Rack (CIR) & MSG",
     icon: "🛰",
     discovery: "Cool flames discovery (FLEX) and solid flammability atlas (BASS-II: 129 trials).",
-    narrative: "FLEX discovered 'cool flames' in hydrocarbon droplets burning steadily at 200–400°C with no visible light. Following BASS, BASS-II conducted 129 systematically documented trials on PMMA films, rods, and Nomex in the Microgravity Science Glovebox, establishing low-speed flow flammability envelopes and toxic gas emission ratios.",
+    narrative: "FLEX observed cool burning in liquid fuel droplets after the visible flame went out. BASS-II studied small solid samples in the Microgravity Science Glovebox. The PSI table used here contains 129 records.",
     legacy: "Produced the core experimental dataset powering this dashboard and modern spacecraft safety standards."
   },
   {
     id: "saffire",
+    source: "https://www.nasa.gov/centers-and-facilities/glenn/flame-burns-out-on-nasas-long-running-spacecraft-fire-experiment/",
     decade: "2016–2024",
     title: "Project Saffire (Large-Scale Fires)",
     facility: "Cygnus Automated Cargo Spacecraft",
     icon: "🔥",
-    discovery: "First large-scale (1-meter) fires tested in realistic spacecraft cabins.",
-    narrative: "After Cygnus vehicles departed the ISS and before atmospheric re-entry, ground controllers ignited large fabric and PMMA arrays (Saffire I through VI). They demonstrated how full-scale fires spread through microgravity cabin air ducts and evaluated post-fire smoke clearing techniques.",
+    discovery: "Saffire studied larger fires aboard uncrewed Cygnus cargo spacecraft.",
+    narrative: "After Cygnus vehicles departed the ISS and before atmospheric re-entry, ground controllers ignited large fabric and PMMA arrays (Saffire I through VI). The series measured flame spread and combustion products in the spacecraft.",
     legacy: "Bridged small-scale lab tests to real spacecraft emergency ventilation and fire suppression design."
   },
   {
     id: "artemis",
-    decade: "2024+",
+    source: "https://science.nasa.gov/biological-physical/investigations/sofie/",
+    decade: "2022 onward",
     title: "Artemis, SoFIE & Moon/Mars Exploration",
     facility: "ISS CIR / Artemis Gateway & Lunar Base",
     icon: "🌕",
-    discovery: "Testing materials in 34% O₂ exploration atmospheres for Gateway and Lunar Base Camp.",
-    narrative: "The SoFIE (Solid Fuel Ignition and Extinction) investigation on the ISS is testing solid fuels under exact Artemis exploration conditions (34% O₂, 8.2 psia) and simulated partial gravity to establish spacecraft material screening rules for lunar and Martian human habitats.",
-    legacy: "Directly certifies fire safety for the Artemis Moon base, lunar rovers, and human missions to Mars."
+    discovery: "SoFIE varies oxygen and pressure to study solid-fuel ignition and extinction in microgravity.",
+    narrative: "The SoFIE insert in the ISS Combustion Integrated Rack supports research on solid samples under different oxygen concentrations and pressures.",
+    legacy: "Informs future studies of spacecraft material flammability and fire safety."
   }
 ];
 
@@ -768,34 +624,29 @@ function renderExplorationAdvisor(envKey = "iss") {
   }
   const displayEl = byId("env-display");
   if (!displayEl) return;
+  displayEl.setAttribute("aria-labelledby", `tab-${envKey}`);
   displayEl.innerHTML = `
     <div class="env-card">
       <div class="env-card-header">
         <div>
-          <span class="env-badge ${env.flammabilityClass}">${escape(env.badge)}</span>
+          <span class="env-badge">${escape(env.badge)}</span>
           <h3>${escape(env.name)}</h3>
-        </div>
-        <div class="env-hazard-meter">
-          <div class="env-meter-label"><span class="mono">FLAMMABILITY HAZARD INDEX</span><strong>${escape(env.flammabilityIndex)}</strong></div>
-          <div class="env-meter-bar"><div class="env-meter-fill ${env.flammabilityClass}" style="width:${env.flammabilityPercent}%"></div></div>
         </div>
       </div>
       <div class="env-metrics-grid">
         <div class="env-metric"><span class="mono muted">TOTAL PRESSURE</span><strong>${escape(env.pressure)}</strong></div>
         <div class="env-metric"><span class="mono muted">O₂ CONCENTRATION</span><strong class="env-val-o2">${escape(env.oxygen)}</strong></div>
-        <div class="env-metric"><span class="mono muted">O₂ PARTIAL PRESSURE</span><strong>${escape(env.o2Partial)}</strong></div>
-        <div class="env-metric"><span class="mono muted">CONVECTIVE REGIME</span><strong>${escape(env.convection)}</strong></div>
       </div>
       <div class="env-analysis-grid">
         <div class="env-box">
-          <h4><i aria-hidden="true">🔬</i> Combustion &amp; Flame Dynamics</h4>
-          <p>${escape(env.physics)}</p>
-          <small class="mono muted">DATASET LINK: ${escape(env.gapNotice)}</small>
+          <h4>Scenario</h4>
+          <p>${escape(env.scope)}</p>
+          ${env.atmosphereUrl ? `<a class="citation" href="${env.atmosphereUrl}" target="_blank" rel="noreferrer">NASA exploration atmosphere ↗</a>` : ""}
         </div>
         <div class="env-box env-rule-box">
-          <h4><i aria-hidden="true">🛡️</i> Actionable Spacecraft Flight Rule</h4>
-          <p>${escape(env.flightRule)}</p>
-          <small class="mono muted">MISSION APPLICATION: ${escape(env.relevance)}</small>
+          <h4>Scope of BASS-II evidence</h4>
+          <p>${escape(env.evidence)}</p>
+          <a class="citation" href="${env.url}" target="_blank" rel="noreferrer">${escape(env.source)} ↗</a>
         </div>
       </div>
     </div>
@@ -830,6 +681,7 @@ function renderTimeline(eraId = "iss") {
       <div class="timeline-legacy">
         <strong class="mono">MISSION ARCHITECTURE RELEVANCE:</strong>
         <p>${escape(era.legacy)}</p>
+        <a class="citation" href="${era.source}" target="_blank" rel="noreferrer">NASA ↗</a>
       </div>
     </div>
   `;
@@ -852,12 +704,13 @@ byId("reset-filters").addEventListener("click", () => {
 });
 byId("reset-map-filter").addEventListener("click", () => setMapMaterialFilter("", true));
 byId("toggle-regimes")?.addEventListener("click", () => {
-  showRegimes = !showRegimes;
+  showExtinctionReference = !showExtinctionReference;
   const btn = byId("toggle-regimes");
   if (btn) {
-    btn.setAttribute("aria-pressed", String(showRegimes));
-    btn.textContent = showRegimes ? "Hide physical regimes" : "Show physical regimes";
+    btn.setAttribute("aria-pressed", String(showExtinctionReference));
+    btn.textContent = showExtinctionReference ? "Hide PMMA reference" : "Show PMMA reference";
   }
+  byId("extinction-reference").hidden = !showExtinctionReference;
   renderFlammabilityMap();
 });
 
@@ -870,6 +723,7 @@ byId("trial-rows").addEventListener("change", (event) => {
   if (!input.checked) selected.delete(input.value);
   updateSelection();
 });
+byId("export-filtered").addEventListener("click", () => downloadCsv(filteredTrials(), "bass-ii-filtered.csv"));
 byId("compare").addEventListener("click", (event) => compare(event.currentTarget));
 byId("reset-selection").addEventListener("click", () => {
   selected.clear();
@@ -892,11 +746,19 @@ document.addEventListener("click", (event) => {
   const mapPill = event.target.closest("[data-map-material]");
   if (mapPill) {
     setMapMaterialFilter(mapPill.dataset.mapMaterial, false);
+    [...byId("chart-legend").children]
+      .find((button) => button.dataset.mapMaterial === mapPill.dataset.mapMaterial)?.focus();
     return;
   }
-  const rankBtn = event.target.closest("[data-rank-material]");
-  if (rankBtn) {
-    setMapMaterialFilter(rankBtn.dataset.rankMaterial, true);
+  const materialButton = event.target.closest("[data-outcome-material]");
+  if (materialButton) {
+    setMapMaterialFilter(materialButton.dataset.outcomeMaterial, true);
+    [...byId("outcome-rows").querySelectorAll("button")]
+      .find((button) => button.dataset.outcomeMaterial === materialButton.dataset.outcomeMaterial)?.focus();
+    return;
+  }
+  if (event.target.closest("#export-comparison")) {
+    downloadCsv(comparisonRecords(), "bass-ii-comparison.csv");
     return;
   }
   const trigger = event.target.closest("[data-trial], [data-video], [data-question]");
@@ -929,10 +791,9 @@ try {
 
   byId("total-trials").textContent = trials.length;
 
-  const stats = computeMaterialStats();
   renderLegend(families);
   renderFlammabilityMap();
-  renderHazardRanking(stats);
+  renderOutcomes();
   renderExplorationAdvisor("iss");
   renderTimeline("iss");
   renderTable();
