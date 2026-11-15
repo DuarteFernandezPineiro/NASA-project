@@ -773,6 +773,262 @@ document.addEventListener("click", (event) => {
   else if (trial) showTrial(trial, trigger);
 });
 
+/* ==========================================================================
+   INVESTIGATIONS AT A GLANCE
+   Facts come from the BASS-II report, NASA's 2015 ISS combustion guide, the
+   challenge brief and NASA's Saffire status report. Relevance is a team
+   assessment for crewed-habitat fire safety, not a NASA rating.
+   ========================================================================== */
+
+const SRC = {
+  report: "https://ntrs.nasa.gov/api/citations/20210011385/downloads/TM-20210011385.pdf",
+  guide: "https://www.nasa.gov/sites/default/files/atoms/files/np-2015-10-034-jsc_combustion_in_reduced_gravity-iss-mini-book-011116-508.pdf",
+  brief: "https://www.spaceappschallenge.org/2026/challenges/flame-in-freefall/",
+  saffire: "https://ntrs.nasa.gov/api/citations/20170002628/downloads/20170002628.pdf",
+};
+
+const INVESTIGATIONS = [
+  {
+    name: "BASS / BASS-II", psi: [["PSI-26", "10.60555/58h4-dy80"], ["PSI-25", "10.60555/4qc4-de67"]], fronts: ["prevention", "suppression"], relevance: 3,
+    fuel: "Solids: PMMA films, rods and slabs, Nomex, cotton-fiberglass fabric, wax",
+    setup: "Small fan-driven flow duct in the Microgravity Science Glovebox",
+    varies: "O₂ 13.6–22.2%, forced airflow, opposed or concurrent flow, fuel geometry",
+    finding: "Tested whether ventilated materials burn in microgravity as well as on Earth or better; PMMA rods burned down to 13.5% O₂.",
+    data: "BASS-II trials and BASS run list in this dashboard",
+    sources: [["NASA TM §1.1", `${SRC.report}#page=11`], ["§6.1.4", `${SRC.report}#page=84`], ["Guide p. 21", `${SRC.guide}#page=21`]],
+  },
+  {
+    name: "Saffire-I, II, III", dataNote: "Saffire-II samples in this dashboard", psi: [["PSI-98", "10.60555/0t15-1z43"], ["PSI-99", "10.60555/2chp-m469"], ["PSI-100", "10.60555/040q-4h36"]], fronts: ["prevention"], relevance: 3,
+    fuel: "Large solid samples such as fabrics and plastics",
+    setup: "Flow unit of about 53 × 90 × 133 cm inside an uncrewed Cygnus cargo vehicle",
+    varies: "Sample size, material, flow; Saffire-II checked O₂ flammability limits",
+    finding: "Spacecraft-scale fires designed to measure flame spread and heat release and to check NASA's normal-gravity screening test.",
+    data: "Context only",
+    sources: [["NASA Saffire 2016", SRC.saffire], ["Challenge brief", SRC.brief]],
+  },
+  {
+    name: "FLEX / FLEX-2", dataNote: "274 FLEX tests in this dashboard", psi: [["PSI-69", "10.60555/mbq8-0451"], ["PSI-68", "10.60555/byp8-h018"]], fronts: ["suppression"], relevance: 3,
+    fuel: "Liquid fuel droplets: heptane, methanol; FLEX-2 adds mixtures and fuel surrogates",
+    setup: "Multi-user Droplet Combustion Apparatus in the Combustion Integrated Rack",
+    varies: "Inert diluent added to the atmosphere: nitrogen, CO₂, helium or xenon",
+    finding: "Flammability limits are lower in reduced gravity, so Earth standards for inert-gas suppressants give less safety margin.",
+    data: "Context only",
+    sources: [["Guide p. 12", `${SRC.guide}#page=12`], ["Challenge brief", SRC.brief]],
+  },
+  {
+    name: "SAME / SAME-R", psi: [["PSI-102", "10.60555/gd4k-8h62"], ["PSI-101", "10.60555/2np7-jv14"]], fronts: ["detection"], relevance: 3,
+    fuel: "Smoke from overheated spacecraft materials",
+    setup: "Microgravity Science Glovebox (2007 and 2010)",
+    varies: "Material and heating; measures smoke particle-size distribution",
+    finding: "Smoke properties change without buoyancy, which guides the design of spacecraft smoke detectors.",
+    data: "Context only",
+    sources: [["Guide p. 26", `${SRC.guide}#page=26`], ["Guide p. 45", `${SRC.guide}#page=45`]],
+  },
+  {
+    name: "DAFT / DAFT-2", fronts: ["detection"], relevance: 2,
+    fuel: "No fire: background dust and aerosols in the ISS cabin",
+    setup: "Instrument also used for smoke detection in SAME",
+    varies: "Cabin aerosol levels",
+    finding: "Background particle levels set the baseline a smoke detector must ignore to avoid false alarms.",
+    data: "Context only",
+    sources: [["Guide p. 26", `${SRC.guide}#page=26`], ["Challenge brief", SRC.brief]],
+  },
+  {
+    name: "BRE (ACME)", psi: [["PSI-20", "10.60555/vb93-3y72"]], fronts: ["prevention"], relevance: 2,
+    fuel: "Gaseous fuel through a porous burner that emulates burning solids and liquids",
+    setup: "ACME hardware in the Combustion Integrated Rack",
+    varies: "Fuel flow controlled by heat flux and surface temperature, still atmosphere",
+    finding: "Aims to test whether existing flammability test methods hold in low and partial gravity.",
+    data: "Context only",
+    sources: [["Guide p. 15", `${SRC.guide}#page=15`], ["Challenge brief", SRC.brief]],
+  },
+  {
+    name: "CFI-G (ACME)", psi: [["PSI-159", "10.60555/cyt1-kh64"]], fronts: ["prevention"], relevance: 2,
+    fuel: "Gaseous fuels such as propane in nitrogen",
+    setup: "Spherical burner in the ACME combustion chamber",
+    varies: "Oxygen-nitrogen mixtures of up to 85% O₂ flowing from the burner (inside-out flames)",
+    finding: "The highest O₂ concentrations tested in microgravity, relevant to oxygen-rich habitat atmospheres, but with gaseous fuels only.",
+    data: "Context only",
+    sources: [["Challenge brief", SRC.brief]],
+  },
+  {
+    name: "Cool Flames (CFI)", psi: [["PSI-39", null]], fronts: ["detection"], relevance: 2,
+    fuel: "Liquid fuel droplets",
+    setup: "Multi-user Droplet Combustion Apparatus in the Combustion Integrated Rack",
+    varies: "Fuel type, pressure, diluent",
+    finding: "FLEX found cool flames burning on after the visible flame went out; CFI studies their stability and spontaneous re-ignition.",
+    data: "Context only",
+    sources: [["Guide p. 13", `${SRC.guide}#page=13`], ["Guide p. 41", `${SRC.guide}#page=41`]],
+  },
+  {
+    name: "E-FIELD Flames (ACME)", psi: [["PSI-22", "10.60555/se5a-8c73"]], fronts: ["prevention"], relevance: 1,
+    fuel: "Gaseous coflow or jet flames",
+    setup: "ACME hardware with up to 10 kV between burner and mesh",
+    varies: "Electric field strength, fuel dilution",
+    finding: "The electric field acting on flame ions was used to mimic partial gravity.",
+    data: "Context only",
+    sources: [["Guide p. 16", `${SRC.guide}#page=16`], ["Challenge brief", SRC.brief]],
+  },
+  {
+    name: "SPICE / SLICE", psi: [["PSI-107", "10.60555/9kbh-e962"], ["PSI-106", "10.60555/pm12-rg61"]], fronts: ["detection"], relevance: 1,
+    fuel: "Gaseous jet flames",
+    setup: "Fan-driven flow duct in the Microgravity Science Glovebox (later reused by BASS)",
+    varies: "Fuel and coflow velocity",
+    finding: "Soot formation, smoke point and flame liftoff; mainly combustion science, indirectly relevant to smoke.",
+    data: "Context only",
+    sources: [["Guide p. 13", `${SRC.guide}#page=13`], ["Guide p. 14", `${SRC.guide}#page=14`]],
+  },
+  {
+    name: "LUCI · FM2 (future)", fronts: ["prevention"], relevance: 3,
+    fuel: "Material flammability (FM2) and combustion (LUCI) on the Moon",
+    setup: "Lunar surface",
+    varies: "Lunar gravity (about 1/6 g)",
+    finding: "No partial-gravity combustion data exist in PSI yet; these investigations are expected to provide it.",
+    data: "Not yet available",
+    sources: [["Challenge brief", SRC.brief]],
+  },
+];
+
+const FRONT_LABEL = { prevention: "Prevention", detection: "Detection", suppression: "Suppression" };
+const RELEVANCE_LABEL = { 3: ["High", "rel-high"], 2: ["Medium", "rel-medium"], 1: ["Low", "rel-low"] };
+let activeFront = "";
+
+function renderInvestigations() {
+  const rows = INVESTIGATIONS
+    .filter((item) => !activeFront || item.fronts.includes(activeFront))
+    .sort((a, b) => b.relevance - a.relevance);
+  byId("investigation-rows").innerHTML = rows.map((item) => {
+    const [label, cls] = RELEVANCE_LABEL[item.relevance];
+    return `<tr>
+      <th scope="row"><strong>${escape(item.name)}</strong><span class="inv-data">${escape(item.dataNote || item.data)}</span>${
+        (item.psi || []).map(([id, doi]) => `<a class="psi-link" href="${doi ? `https://doi.org/${doi}` : `https://psi.nasa.gov/physci/repo/data/investigations/${id}`}" target="_blank" rel="noreferrer">${id}${doi ? ` · doi:${doi}` : ""} ↗</a>`).join("")
+      }</th>
+      <td>${item.fronts.map((f) => `<span class="front-tag front-${f}">${FRONT_LABEL[f]}</span>`).join("")}</td>
+      <td>${escape(item.fuel)}</td>
+      <td>${escape(item.setup)}</td>
+      <td>${escape(item.varies)}</td>
+      <td>${escape(item.finding)}</td>
+      <td><span class="rel-badge ${cls}">${label}</span></td>
+      <td><div class="citations">${item.sources.map(([text, url]) => `<a class="citation" href="${url}" target="_blank" rel="noreferrer">${escape(text)} ↗</a>`).join("")}</div></td>
+    </tr>`;
+  }).join("");
+  for (const button of document.querySelectorAll("[data-front]")) {
+    button.classList.toggle("active", button.dataset.front === activeFront);
+    button.setAttribute("aria-pressed", String(button.dataset.front === activeFront));
+  }
+}
+
+
+/* ==========================================================================
+   BEYOND BASS-II: FLEX (PSI-69), SAFFIRE-II (PSI-99) AND BASS (PSI-26)
+   Values come from the PSI experimental tables via scripts/import-psi-extra.py.
+   ========================================================================== */
+
+const DILUENT = {
+  N2: { label: "O₂/N₂ only", color: "#94a3b8" },
+  CO2: { label: "+ CO₂ suppressant", color: "#fb923c" },
+  He: { label: "+ Helium suppressant", color: "#38bdf8" },
+};
+const O2_BANDS = [
+  { label: "≤15% O₂", test: (o) => o <= 0.15 },
+  { label: "16–20%", test: (o) => o > 0.15 && o <= 0.20 },
+  { label: "21–25%", test: (o) => o > 0.20 && o <= 0.25 },
+  { label: "≥30% O₂", test: (o) => o >= 0.30 },
+];
+
+function renderFlexChart(tests) {
+  const W = 620, H = 360, pad = { top: 18, right: 18, bottom: 48, left: 54 };
+  const plotW = W - pad.left - pad.right, plotH = H - pad.top - pad.bottom;
+  const xMin = 8, xMax = 16, yMin = 10, yMax = 36;
+  const x = (v) => pad.left + ((v - xMin) / (xMax - xMin)) * plotW;
+  const y = (v) => pad.top + plotH - ((v - yMin) / (yMax - yMin)) * plotH;
+  const shown = tests.filter((t) => t.pressurePsi != null && t.pressurePsi >= xMin && t.pressurePsi <= xMax && t.o2 != null);
+  let m = "";
+  for (const v of [10, 15, 20, 25, 30, 35]) {
+    m += `<line class="chart-grid-line" x1="${pad.left}" y1="${y(v)}" x2="${W - pad.right}" y2="${y(v)}" />`;
+    m += `<text class="chart-axis-label" x="${pad.left - 8}" y="${y(v) + 4}" text-anchor="end">${v}%</text>`;
+  }
+  for (const v of [8, 10, 12, 14, 16]) {
+    m += `<line class="chart-grid-line" x1="${x(v)}" y1="${pad.top}" x2="${x(v)}" y2="${pad.top + plotH}" />`;
+    m += `<text class="chart-axis-label" x="${x(v)}" y="${pad.top + plotH + 18}" text-anchor="middle">${v}</text>`;
+  }
+  // Planned lunar habitat atmosphere: ≥30% O₂ at ≤10.2 psi (challenge brief).
+  m += `<rect class="chart-lunar" x="${x(xMin)}" y="${y(yMax)}" width="${x(10.2) - x(xMin)}" height="${y(30) - y(yMax)}" />`;
+  m += `<text class="chart-lunar-label" x="${x(xMin) + 8}" y="${y(yMax) + 16}">LUNAR HABITAT TARGET</text>`;
+  m += `<text class="chart-lunar-label" x="${x(xMin) + 8}" y="${y(yMax) + 30}">≥30% O₂ · ≤10.2 PSI</text>`;
+  m += `<line class="chart-ref-line" x1="${x(14.7)}" y1="${pad.top}" x2="${x(14.7)}" y2="${pad.top + plotH}" />`;
+  m += `<text class="chart-axis-label" x="${x(14.7) - 4}" y="${pad.top + 12}" text-anchor="end">1 atm</text>`;
+  m += `<text class="chart-axis-title" x="${pad.left + plotW / 2}" y="${H - 8}" text-anchor="middle">Chamber pressure (psi)</text>`;
+  m += `<text class="chart-axis-title" transform="rotate(-90)" x="${-(pad.top + plotH / 2)}" y="16" text-anchor="middle">Initial O₂ (%)</text>`;
+  for (const t of shown) {
+    const c = DILUENT[t.diluent].color;
+    const out = t.testEnd === "Extinction";
+    // Small deterministic jitter so repeated conditions stay visible.
+    const jx = ((t.test * 37) % 11 - 5) * 0.03, jy = ((t.test * 53) % 11 - 5) * 0.09;
+    m += `<circle class="flex-point" cx="${x(t.pressurePsi + jx).toFixed(1)}" cy="${y(t.o2 * 100 + jy).toFixed(1)}" r="4.2" fill="${out ? c : "transparent"}" stroke="${c}" fill-opacity=".85"><title>FLEX ${t.test} (${escape(t.id)}) · ${escape(t.fuel)} · ${Math.round(t.o2 * 100)}% O₂ · ${t.pressurePsi} psi · ${DILUENT[t.diluent].label} · ${escape(t.testEnd)}</title></circle>`;
+  }
+  byId("flex-svg").innerHTML = m;
+  const hidden = tests.length - shown.length;
+  byId("flex-count").textContent = `${shown.length} of ${tests.length} FLEX tests plotted · ${hidden} at higher pressure or without a pressure reading not shown`;
+}
+
+function renderFlexBands(tests) {
+  byId("flex-bands").innerHTML = O2_BANDS.map((band) => {
+    const group = tests.filter((t) => t.o2 != null && band.test(t.o2));
+    const ext = group.filter((t) => t.testEnd === "Extinction").length;
+    const share = group.length ? ext / group.length : 0;
+    return `<div class="band-row">
+      <span class="band-label">${band.label}</span>
+      <span class="band-bar"><i style="width:${(share * 100).toFixed(0)}%"></i></span>
+      <span class="band-value">${Math.round(share * 100)}% <small>(${ext}/${group.length})</small></span>
+    </div>`;
+  }).join("");
+}
+
+function renderSaffire(data) {
+  byId("saffire-rows").innerHTML = data.samples.map((s) => {
+    const shownMaterial = s.materialFromAbove ? `${s.material}*` : s.material;
+    const ug = s.ugBurnLength.replace(/\s*\(note \d\)/i, "");
+    const noSpread = /^~\s*0$/.test(s.ugBurnLength.trim());
+    return `<tr class="${noSpread ? "saffire-nospread" : ""}">
+      <th scope="row">${escape(s.sample)}</th>
+      <td>${escape(shownMaterial)}</td>
+      <td>${escape(s.thickness)}</td>
+      <td>${escape(s.flowDirection)}</td>
+      <td><strong>${escape(ug)}</strong></td>
+      <td>${escape(s.oneGBurnLength)}</td>
+    </tr>`;
+  }).join("");
+}
+
+function renderBass(bass) {
+  const list = Object.entries(bass.materials).map(([name, n]) => `${n} ${name}`).join(", ");
+  byId("bass-summary").textContent = `${bass.runs} runs between ${bass.dates[0]} and ${bass.dates[1]} (${list}). The PSI table lists the runs and samples only, without O₂, airflow or outcome, so BASS is not plotted.`;
+}
+
+async function loadPsiExtra() {
+  try {
+    const response = await fetch("psi-extra.json");
+    if (!response.ok) throw new Error("unavailable");
+    const data = await response.json();
+    renderFlexChart(data.flex);
+    renderFlexBands(data.flex);
+    renderSaffire(data.saffire2);
+    renderBass(data.bass);
+  } catch {
+    byId("beyond").hidden = true;
+  }
+}
+
+byId("investigations").querySelector(".front-filters").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-front]");
+  if (!button) return;
+  activeFront = button.dataset.front;
+  renderInvestigations();
+});
+renderInvestigations();
+loadPsiExtra();
+
 modal.addEventListener("close", () => { modalBody.replaceChildren(); requester?.focus(); });
 
 try {
