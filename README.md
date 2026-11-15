@@ -6,9 +6,11 @@ An interactive dashboard that explores and summarizes the 129 trials of NASA's *
 
 ## What it does
 
-- **Trial map.** Initial calibrated O₂ and single airflow readings, with markers for ignition yes, no or unknown. The map reports excluded records; the explorer retains the original airflow entries.
+- **Trial map.** Initial calibrated O₂ and single airflow readings, with markers for ignition yes, no or unknown. An optional overlay shows the uncertainty ranges for the thin-PMMA experiments in NASA Table 2.1. The map reports excluded records; the explorer retains the original airflow entries.
 - **Documented outcomes.** Ignition and spread counts and percentages, overall and by material family, using all trials in each denominator.
 - **Trial explorer.** Filters, comparison of up to three trials with differences and missing fields marked, CSV downloads and original ISS recordings.
+- **Exploration Advisor.** A comparison of four environments with links to NASA references and the limits of the BASS-II evidence.
+- **Decades of NASA microgravity combustion.** An interactive timeline from drop towers to SoFIE.
 - **Ask NASA documents.** A retrieval-augmented assistant over the BASS-II summary report and NASA's ISS combustion guide. Every claim links to the PDF page that supports it; answers flag when a question goes beyond the tested range.
 
 ## Key findings
