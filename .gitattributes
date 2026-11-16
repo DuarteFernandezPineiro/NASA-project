@@ -3,4 +3,6 @@
 
 # Every file needs to be detected
 * linguist-detectable=true
+* linguist-documentation=false
+
 submission/*.pdf binary
