@@ -2,6 +2,11 @@
   "name": "flame-in-freefall",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22" },
-  "scripts": { "start": "node server.mjs", "test:ai": "node scripts/test-ai.mjs" }
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test:ai": "node scripts/test-ai.mjs"
+  }
 }

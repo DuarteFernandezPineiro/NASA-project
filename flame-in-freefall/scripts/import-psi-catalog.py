@@ -27,14 +27,38 @@ TABLES = [
     (21, "CLD Flame", "ACME CLD Flame", "Gas flames", "Session summary"),
     (22, "ACME E-FIELD Flames", "ACME E-FIELD Flames", "Gas flames", "Session summary"),
     (23, "ACME s-Flame", "ACME s-Flame", "Gas flames", "Session summary"),
-    (10, "Flame Design_Normal Flame", "Flame Design · Normal", "Gas flames", "Test record"),
-    (10, "Flame Design_Inverse Flame", "Flame Design · Inverse", "Gas flames", "Test record"),
+    (
+        10,
+        "Flame Design_Normal Flame",
+        "Flame Design · Normal",
+        "Gas flames",
+        "Test record",
+    ),
+    (
+        10,
+        "Flame Design_Inverse Flame",
+        "Flame Design · Inverse",
+        "Gas flames",
+        "Test record",
+    ),
     (159, "CFI-G_Normal Flames", "CFI-G · Normal", "Gas flames", "Test record"),
     (159, "CFI-G_Inverse Flames", "CFI-G · Inverse", "Gas flames", "Test record"),
     (106, "Slice", "SLICE", "Gas flames", "Session summary"),
     (107, "Spice", "SPICE", "Gas flames", "Measurement record"),
-    (142, "Data Summary Table", "Cool flame studies · Figure index", "Related research", "Figure reference"),
-    (181, "Experimental Table_PSI_181", "ISSI solder study", "Related research", "Sample inventory"),
+    (
+        142,
+        "Data Summary Table",
+        "Cool flame studies · Figure index",
+        "Related research",
+        "Figure reference",
+    ),
+    (
+        181,
+        "Experimental Table_PSI_181",
+        "ISSI solder study",
+        "Related research",
+        "Sample inventory",
+    ),
 ]
 
 NOTES = {
@@ -87,31 +111,44 @@ def build():
         for line, values in source:
             key = tuple(value.strip() for value in values)
             first = seen.setdefault(key, line)
-            record = {"line": line, "kind": row_kind(psi, default, values), "values": values}
+            record = {
+                "line": line,
+                "kind": row_kind(psi, default, values),
+                "values": values,
+            }
             if first != line:
                 record["repeatOf"] = first
             rows.append(record)
-        datasets.append({
-            "id": table_id,
-            "psi": accession,
-            "name": title,
-            "group": group,
-            "file": filename,
-            "source": f"https://psi.nasa.gov/physci/repo/data/investigations/{accession}",
-            "note": NOTES.get(psi, ""),
-            "columns": [column.strip() for column in columns],
-            "counts": dict(Counter(row["kind"] for row in rows)),
-            "rows": rows,
-        })
+        datasets.append(
+            {
+                "id": table_id,
+                "psi": accession,
+                "name": title,
+                "group": group,
+                "file": filename,
+                "source": f"https://psi.nasa.gov/physci/repo/data/investigations/{accession}",
+                "note": NOTES.get(psi, ""),
+                "columns": [column.strip() for column in columns],
+                "counts": dict(Counter(row["kind"] for row in rows)),
+                "rows": rows,
+            }
+        )
     supplied = {file.name for file in ROOT.glob("PSI-*_Experimental table_*.csv")}
     indexed = {dataset["file"] for dataset in datasets}
     if supplied != indexed:
-        raise ValueError(f"Catalog coverage changed. Newly supplied: {sorted(supplied - indexed)}; missing: {sorted(indexed - supplied)}")
+        raise ValueError(
+            f"Catalog coverage changed. Newly supplied: {sorted(supplied - indexed)}; missing: {sorted(indexed - supplied)}"
+        )
     return datasets
 
 
 if __name__ == "__main__":
     datasets = build()
-    DESTINATION.write_text(json.dumps(datasets, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
-    print(f"{len(datasets)} tables, {len({data['psi'] for data in datasets})} investigations, "
-          f"{sum(len(data['rows']) for data in datasets)} source rows -> dist/psi-catalog.json")
+    DESTINATION.write_text(
+        json.dumps(datasets, ensure_ascii=False, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+    print(
+        f"{len(datasets)} tables, {len({data['psi'] for data in datasets})} investigations, "
+        f"{sum(len(data['rows']) for data in datasets)} source rows -> dist/psi-catalog.json"
+    )

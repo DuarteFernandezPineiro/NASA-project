@@ -33,36 +33,36 @@ An interactive dashboard that explores and summarizes the 129 trials of NASA's *
 
 ## NASA data
 
-| Source | Use |
-|---|---|
-| [PSI-25 BASS-II experimental table](https://doi.org/10.60555/4qc4-de67) (NASA Physical Sciences Informatics) | 129 trial records and recordings |
-| [NASA/TM-20210011385, BASS-II Summary Report](https://ntrs.nasa.gov/citations/20210011385) | Trial observations (Appendix A) and 238 indexed passages |
-| [PSI-69 FLEX experimental table](https://doi.org/10.60555/mbq8-0451) | 274 droplet tests: fuel, pressure, O₂ and diluent, how each test ended |
-| [PSI-99 SAFFIRE-II experimental table](https://doi.org/10.60555/2chp-m469) | 9 samples burned in microgravity and in normal gravity |
-| [PSI-26 BASS experimental table](https://doi.org/10.60555/58h4-dy80) | List of 121 runs and samples (no O₂, airflow or outcome) |
-| [NP-2015-10-034-JSC, A Researcher's Guide to: Combustion Science](https://www.nasa.gov/sites/default/files/atoms/files/np-2015-10-034-jsc_combustion_in_reduced_gravity-iss-mini-book-011116-508.pdf) | 88 indexed passages of context on other ISS combustion experiments |
+| Source                                                                                                                                                                                                | Use                                                                    |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| [PSI-25 BASS-II experimental table](https://doi.org/10.60555/4qc4-de67) (NASA Physical Sciences Informatics)                                                                                          | 129 trial records and recordings                                       |
+| [NASA/TM-20210011385, BASS-II Summary Report](https://ntrs.nasa.gov/citations/20210011385)                                                                                                            | Trial observations (Appendix A) and 238 indexed passages               |
+| [PSI-69 FLEX experimental table](https://doi.org/10.60555/mbq8-0451)                                                                                                                                  | 274 droplet tests: fuel, pressure, O₂ and diluent, how each test ended |
+| [PSI-99 SAFFIRE-II experimental table](https://doi.org/10.60555/2chp-m469)                                                                                                                            | 9 samples burned in microgravity and in normal gravity                 |
+| [PSI-26 BASS experimental table](https://doi.org/10.60555/58h4-dy80)                                                                                                                                  | List of 121 runs and samples (no O₂, airflow or outcome)               |
+| [NP-2015-10-034-JSC, A Researcher's Guide to: Combustion Science](https://www.nasa.gov/sites/default/files/atoms/files/np-2015-10-034-jsc_combustion_in_reduced_gravity-iss-mini-book-011116-508.pdf) | 88 indexed passages of context on other ISS combustion experiments     |
 
 ### PSI records cited in "Investigations at a glance"
 
 As required by NASA's Science Mission Directorate open-science guidance, each investigation is cited by its PSI persistent identifier.
 
-| Investigation | PSI record | DOI |
-|---|---|---|
-| BASS | PSI-26 | [10.60555/58h4-dy80](https://doi.org/10.60555/58h4-dy80) |
-| BASS-II | PSI-25 | [10.60555/4qc4-de67](https://doi.org/10.60555/4qc4-de67) |
-| Saffire-I | PSI-98 | [10.60555/0t15-1z43](https://doi.org/10.60555/0t15-1z43) |
-| Saffire-II | PSI-99 | [10.60555/2chp-m469](https://doi.org/10.60555/2chp-m469) |
-| Saffire-III | PSI-100 | [10.60555/040q-4h36](https://doi.org/10.60555/040q-4h36) |
-| FLEX | PSI-69 | [10.60555/mbq8-0451](https://doi.org/10.60555/mbq8-0451) |
-| FLEX-2 | PSI-68 | [10.60555/byp8-h018](https://doi.org/10.60555/byp8-h018) |
-| SAME | PSI-102 | [10.60555/gd4k-8h62](https://doi.org/10.60555/gd4k-8h62) |
-| SAME-R | PSI-101 | [10.60555/2np7-jv14](https://doi.org/10.60555/2np7-jv14) |
-| ACME BRE | PSI-20 | [10.60555/vb93-3y72](https://doi.org/10.60555/vb93-3y72) |
-| ACME CFI-G | PSI-159 | [10.60555/cyt1-kh64](https://doi.org/10.60555/cyt1-kh64) |
-| ACME E-FIELD Flames | PSI-22 | [10.60555/se5a-8c73](https://doi.org/10.60555/se5a-8c73) |
-| SPICE | PSI-107 | [10.60555/9kbh-e962](https://doi.org/10.60555/9kbh-e962) |
-| SLICE | PSI-106 | [10.60555/pm12-rg61](https://doi.org/10.60555/pm12-rg61) |
-| Cool Flames Investigation | [PSI-39](https://psi.nasa.gov/physci/repo/data/investigations/PSI-39) | not shown on the record page |
+| Investigation             | PSI record                                                            | DOI                                                      |
+| ------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------- |
+| BASS                      | PSI-26                                                                | [10.60555/58h4-dy80](https://doi.org/10.60555/58h4-dy80) |
+| BASS-II                   | PSI-25                                                                | [10.60555/4qc4-de67](https://doi.org/10.60555/4qc4-de67) |
+| Saffire-I                 | PSI-98                                                                | [10.60555/0t15-1z43](https://doi.org/10.60555/0t15-1z43) |
+| Saffire-II                | PSI-99                                                                | [10.60555/2chp-m469](https://doi.org/10.60555/2chp-m469) |
+| Saffire-III               | PSI-100                                                               | [10.60555/040q-4h36](https://doi.org/10.60555/040q-4h36) |
+| FLEX                      | PSI-69                                                                | [10.60555/mbq8-0451](https://doi.org/10.60555/mbq8-0451) |
+| FLEX-2                    | PSI-68                                                                | [10.60555/byp8-h018](https://doi.org/10.60555/byp8-h018) |
+| SAME                      | PSI-102                                                               | [10.60555/gd4k-8h62](https://doi.org/10.60555/gd4k-8h62) |
+| SAME-R                    | PSI-101                                                               | [10.60555/2np7-jv14](https://doi.org/10.60555/2np7-jv14) |
+| ACME BRE                  | PSI-20                                                                | [10.60555/vb93-3y72](https://doi.org/10.60555/vb93-3y72) |
+| ACME CFI-G                | PSI-159                                                               | [10.60555/cyt1-kh64](https://doi.org/10.60555/cyt1-kh64) |
+| ACME E-FIELD Flames       | PSI-22                                                                | [10.60555/se5a-8c73](https://doi.org/10.60555/se5a-8c73) |
+| SPICE                     | PSI-107                                                               | [10.60555/9kbh-e962](https://doi.org/10.60555/9kbh-e962) |
+| SLICE                     | PSI-106                                                               | [10.60555/pm12-rg61](https://doi.org/10.60555/pm12-rg61) |
+| Cool Flames Investigation | [PSI-39](https://psi.nasa.gov/physci/repo/data/investigations/PSI-39) | not shown on the record page                             |
 
 ## How the assistant works
 
