@@ -22,6 +22,8 @@ def read_table(path):
         if not any(value.strip() for value in values):
             continue
         if len(values) != len(header):
-            raise ValueError(f"{path.name}, line {start}: expected {len(header)} cells, got {len(values)}")
+            raise ValueError(
+                f"{path.name}, line {start}: expected {len(header)} cells, got {len(values)}"
+            )
         rows.append((start, values))
     return header, rows
